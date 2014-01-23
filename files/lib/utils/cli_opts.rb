@@ -16,23 +16,27 @@
 #
 
 require 'optparse'
+require_relative './config'
 
 class CLIOpts
   attr_reader :zero, :args, :options
   attr_accessor :optparser
 
-  def initialize(zero=$0, args=ARGV)
+  DefaultConfigFile = '/etc/openshift/openshift_zabbix.conf'
+
+  DefaultOptions = {
+    :verbose => false,
+    :server  => 'localhost',
+    :port    => 10050,
+    :user    => 'admin',
+    :passwd  => 'zabbix'
+  }
+
+  def initialize(zero=$0, args=ARGV, config_file=DefaultConfigFile)
     @zero = zero
     @args = args
 
-    @options = {
-      :verbose => false,
-      :server  => 'localhost',
-      :port    => 10050,
-      :user    => 'admin',
-      :passwd  => 'zabbix'
-    }
-
+    init_config(config_file)
     init_opts
   end
 
@@ -46,6 +50,12 @@ class CLIOpts
 
   private
 
+  def init_config(cfg)
+    conf     = ConfigFile.new(cfg).get
+    @options = DefaultOptions
+    @options.merge!(conf).map { |k,v| [k.to_sym, v]}
+  end
+
   def init_opts
     @optparser = OptionParser.new { |opts|
       opts.banner = "Usage: #{@zero} [options]"
@@ -55,21 +65,15 @@ class CLIOpts
         puts opts
         exit 1
       }
-      opts.on('-v', '--[no-]verbose', 'Change verbosity') { |x|
-        @options[:verbose] = x
+      opts.on('-v', '--[no-]verbose', 'Change verbosity') { |x| @options[:verbose] = x }
+      opts.on('-f', '--file PATH', String, 'YAML configuration file (default: /etc/openshift/openshift_zabbix.conf)') { |x|
+        init_config(x)
+        @options[:configfile] = x
       }
-      opts.on('-s', '--server', 'Zabbix server hostname (default: localhost)') { |x|
-        @options[:server] = x
-      }
-      opts.on('-p', '--port', 'Zabbix server port (default: 10050)') { |x|
-        @options[:port] = x
-      }
-      opts.on('--user', 'Zabbix server login username (default: "admin")') { |x|
-        @options[:user] = x
-      }
-      opts.on('--password', 'Zabbix server login password (default: "zabbix")') { |x|
-        @options[:passwd] = x
-      }
+      opts.on('-s', '--server SERVER', 'Zabbix server hostname (default: localhost)') { |x| @options[:server] = x }
+      opts.on('-p', '--port PORT', 'Zabbix server port (default: 10050)') { |x| @options[:port] = x }
+      opts.on('--user USER', 'Zabbix server login username (default: "admin")') { |x| @options[:user] = x }
+      opts.on('--password USER', 'Zabbix server login password (default: "zabbix")') { |x| @options[:passwd] = x }
     }
   end
 end

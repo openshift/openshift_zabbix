@@ -1,0 +1,5 @@
+:host: 'localhost'
+:port: 10050
+:user: 'admin'
+:password: 'zabbix'
+:verbose: true
