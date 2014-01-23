@@ -62,9 +62,9 @@ class ZabbixSender
     puts "Sending:" if verbose
 
     # Create a temporary file for this class (where the data is stored)
-    tmpfile = Tempfile.new('zabbix-sender-tmp-', "#{@rundir}/")
+    tmpfile = Tempfile.new(self.class.name, "#{@rundir}/")
     @entries.each do |entry|
-      line = "#{entry.host} #{entry.zabbix_key} #{entry.data}\n"
+      line = "#{entry.target_host} #{entry.item_key} #{entry.item_value}\n"
 
       puts line if verbose
       tmpfile << line

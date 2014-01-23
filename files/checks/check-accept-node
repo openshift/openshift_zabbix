@@ -1,0 +1,67 @@
+#!/usr/bin/env oo-ruby
+
+#   Copyright 2013 Red Hat Inc.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+# Purpose: Runs oo-accept-node and reports the results to zabbix
+
+require_relative '../lib/zabbix_sender'
+require_relative '../lib/accept_node'
+require_relative '../lib/utils/log'
+require_relative '../lib/utils/cli_opts'
+
+MAX_RETRIES = 5
+
+if __FILE__ == $0
+  $stdout.sync = true
+
+  cli = CLIOpts.new
+  cli.parse
+  opts = cli.options
+
+  zs  = ZabbixSender.new(opts[:server])
+  log = Log.new
+
+  #turn on verbose reporting
+  verbose = opts[:verbose]
+
+  an = AcceptNode.new(verbose)
+  1.upto(MAX_RETRIES) do |i|
+    log.puts "Try #{i} / #{MAX_RETRIES}:" if verbose
+
+    an.run() # run oo-accept-node
+
+    # work around various bugs
+    if an.exitcode != 0
+      if i == 0
+        # cleanup manifest errors on the first run
+        an.restart_mcollective
+      elsif i > 2
+        # try restarting the gear after a couple runs
+        an.restart_gear
+      end
+
+      an.cgroup_reclassify
+      an.remove_partially_deleted_gears()
+      an.restart_cgred()
+      an.fix_missing_frontend()
+      an.kill_unowned_procs()
+    end
+  end
+
+  zs.add_entry("accept_node", an.exitcode)
+  zs.send_data(verbose)
+end
+
+__END__

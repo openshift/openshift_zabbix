@@ -27,7 +27,9 @@ class Log
     @stdout   = Logger.new(STDOUT)
     @stderr   = Logger.new(STDERR)
     @file     = Logger.new(filename) unless filename.nil?
+
     @syslog   = Syslog.open($0, Syslog::LOG_PID, Syslog::LOG_USER)
+    @syslog.close
 
     @output   = out
     @severity = sev
@@ -51,7 +53,9 @@ class Log
     if @@output_map[@output] == :logger
       eval "#{@output.to_s}.#{map_output.log_method.to_s}(#{map_severity(sev)}) { msg }"
     elsif @@output_map[@output] == :syslog
+      @syslog.open($0, Syslog::LOG_PID, Syslog::LOG_USER) unless @syslog.opened?
       eval "#{@output.to_s}.#{map_output.log_method.to_s}(#{map_severity(sev)}, msg)"
+      @syslog.close
     end
   end
 
