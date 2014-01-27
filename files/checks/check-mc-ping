@@ -36,7 +36,7 @@ def main
   log            = Log.new
 
   begin
-    district_hosts = OpenShiftMongo.new(MongoHelper.get_broker_mongo_config).get_district_nodes
+    district_hosts = OpenShiftMongo.new(OpenShiftMongo.get_broker_mongo_config).get_district_nodes
     mc_ping_hosts  = MCOPing.get_mc_ping_hosts
     missing_hosts  = district_hosts - mc_ping_hosts
     retries -= 1
