@@ -40,16 +40,27 @@ class CLIOpts
     init_opts
   end
 
-  def on(*opts, &block)
-    @optparser.on(args, block)
+  #
+  # Pass-through to allow consumers to add their own options
+  #
+  def on(*args, &block)
+    @optparser.on(*args, &block)
   end
 
+  #
+  # Pass-through to delay parsing args until consumers have had a chance to add
+  # their own options
+  #
   def parse
     @optparser.parse(@args)
   end
 
   private
 
+  #
+  # Enable options to be set via config file or CLI.
+  # CLI options will take precedence if both are used.
+  #
   def init_config(cfg)
     conf     = ConfigFile.new(cfg).get
     @options = DefaultOptions

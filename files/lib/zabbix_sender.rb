@@ -20,18 +20,22 @@ require 'fileutils'
 require 'thread'
 require 'json'
 
+require_relative './utils/log'
+
 ZabbixSenderEntry = Struct.new(:target_host, :item_key, :item_value)
 
 class ZabbixSender
   attr_reader :zabbix_server, :rundir, :sender, :fqdn, :entries, :lock
 
-  def initialize(zabbix_server, rundir='/var/run/zabbix', sender='/usr/bin/zabbix_sender', fqdn=Facter.fact('fqdn').value)
-    @zabbix_server = zabbix_server
-    @rundir        = rundir
-    @sender        = sender
-    @fqdn          = fqdn
-    @entries = []
-    @lock = Mutex.new
+  def initialize(server, args = {})
+    @zabbix_server = server
+    @zabbix_port   = args[:port]   || 10051
+    @rundir        = args[:rundir] || '/var/run/zabbix'
+    @sender        = args[:sender] || '/usr/bin/zabbix_sender'
+    @fqdn          = args[:fqdn]   || Facter.fact('fqdn').value
+    @log           = args[:log]    || Log.new
+    @entries       = []
+    @lock          = Mutex.new
 
     FileUtils.mkdir_p(@rundir) unless File.directory?(@rundir)
   end
@@ -58,15 +62,15 @@ class ZabbixSender
     end
   end
 
-  def send_data(verbose = true)
-    puts "Sending:" if verbose
+  def send_data(verbose=true)
+    @log << "Sending:" if verbose
 
     # Create a temporary file for this class (where the data is stored)
     tmpfile = Tempfile.new(self.class.name, "#{@rundir}/")
     @entries.each do |entry|
       line = "#{entry.target_host} #{entry.item_key} #{entry.item_value}\n"
 
-      puts line if verbose
+      @log << line if verbose
       tmpfile << line
     end
     tmpfile.close()
@@ -75,7 +79,6 @@ class ZabbixSender
     cmd += " -vv" if verbose
     cmd += " &> /dev/null" unless verbose
 
-    puts if verbose
     system(cmd)
     retval = $?.exitstatus
 

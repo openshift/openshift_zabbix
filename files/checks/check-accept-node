@@ -21,17 +21,9 @@ require_relative '../lib/accept_node'
 require_relative '../lib/utils/log'
 require_relative '../lib/utils/cli_opts'
 
-MAX_RETRIES = 5
-
-if __FILE__ == $0
-  $stdout.sync = true
-
-  cli = CLIOpts.new
-  cli.parse
-  opts = cli.options
-
-  zs  = ZabbixSender.new(opts[:server])
+def main(opts)
   log = Log.new
+  zs  = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
 
   #turn on verbose reporting
   verbose = opts[:verbose]
@@ -62,6 +54,19 @@ if __FILE__ == $0
 
   zs.add_entry("accept_node", an.exitcode)
   zs.send_data(verbose)
+end
+
+if __FILE__ == $0
+  $stdout.sync = true
+
+  cli = CLIOpts.new
+  cli.on('--retries NUM', Integer, 'Max. number of retries (Default: 5)') { |x| cli.options[:retries] = x }
+  cli.parse
+  opts = cli.options
+
+  MAX_RETRIES = opts[:retries] || 5
+
+  main(opts)
 end
 
 __END__
