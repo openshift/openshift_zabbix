@@ -68,7 +68,7 @@ class ZabbixSender
     # Create a temporary file for this class (where the data is stored)
     tmpfile = Tempfile.new(self.class.name, "#{@rundir}/")
     @entries.each do |entry|
-      line = "#{entry.target_host} #{entry.item_key} #{entry.item_value}\n"
+      line = "#{entry.target_host} #{entry.item_key} #{entry.item_value}"
 
       @log << line if verbose
       tmpfile << line

@@ -12,41 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Purpose: utility class to manage stored state for scripts
+# Purpose: Reads a YAML config file. Nothing too fancy.
 
-class StateFile
-  attr_reader :filename, :state
+require 'yaml'
+
+class ConfigFile
+  attr_accessor :filename, :config
 
   def initialize(filename)
     @filename = filename
+    load_config
   end
 
-  #
-  # Public: load state data from Marshalled file
-  #
-  def load
-    begin
-      fh = File.open(@filename, 'r')
-      @state = Marshal.load(fh)
-      fh.close
-    rescue Errno::ENOENT
-      @state = []
-    rescue => e
-      raise e
-    end
-    return @state
+  def get
+    load_config if @config.nil?
+    return @config
   end
 
-  #
-  # Public: write state data to Marshalled file
-  #
-  def save(state=@state)
-    begin
-      fh = File.open(@filename, File::WRONLY|File::CREAT)
-      fh.write(Marshal.dump(state))
-      fh.close
-    rescue => e
-      raise e
+  private
+
+  def load_config
+    if File.exists?(@filename) and File.readable?(@filename)
+      @config = YAML::load_file(@filename)
+    else
+      @config = Hash.new(nil)
     end
   end
+
 end
+
+__END__

@@ -1,0 +1,142 @@
+#!/usr/bin/env oo-ruby
+
+# Copyright 2012 Red Hat Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Purpose: Report statistics from the OpenShift Broker's user_action.log to Zabbix
+#
+
+require 'benchmark'
+require 'facter'
+
+require_relative '../lib/logfile_parser'
+require_relative '../lib/user_action'
+require_relative '../lib/zabbix_sender'
+require_relative '../lib/utils/cli_opts'
+require_relative '../lib/utils/log'
+require_relative '../lib/utils/state'
+
+UserActionLog = '/var/log/openshift/broker/user_action.log'
+
+$parse_errors = 0
+
+#
+# Public: parse the user_action.log, skipping any lines with date stamps older
+#       than the end of the last run.
+#
+def parse_action_log
+  lines   = 0
+  actions = []
+  errors  = 0
+
+  fh = LogFileParser.new($user_action_log, $last_check_time)
+  $log.puts "Last check time:  #{$last_check_time}" if $verbose
+  fh.each { |line|
+    next unless /^RESULT=(SUCCESS|FAILURE)/.match(line)
+
+    lines += 1
+    ua = UserAction.new(line, $verbose)
+    $parse_errors += ua.error_count if ua.error_count > 0
+    if ua.timestamp.nil? or $last_check_time.nil?
+      errors += 1
+      next
+    end
+
+    if ua.timestamp >= $last_check_time
+      actions << ua
+    else
+      errors += 1
+    end
+  }
+
+  $log.puts "PARSED: #{lines}" if $verbose
+  $parse_errors += errors
+  return actions
+end
+
+#
+# Public: extract statistics from the parsed log.
+#
+def collect_stats(user_actions, seen_actions=[])
+  $zabbix_sender.add_entry("openshift_user_actions_total", user_actions.count)
+
+  status  = Hash.new(0)
+  actions = Hash.new(0)
+
+  user_actions.each { |ua|
+      status[ua.result] += 1
+      actions[ua.action] += 1
+  }
+
+  seen_actions -= status.keys
+  seen_actions -= actions.keys
+
+  status.each  { |k,v| $zabbix_sender.add_entry("openshift_user_action_#{k}",v) }
+  actions.each { |k,v| $zabbix_sender.add_entry("openshift_user_action_#{k}",v) }
+  seen_actions.each { |act| $zabbix_sender.add_entry("openshift_user_action_#{act}",0) }
+
+  return [seen_actions + actions.keys + status.keys].flatten
+end
+
+if __FILE__ == $0
+  start_time = Time.now
+
+  cli = CLIOpts.new
+  cli.on('-i', '--ignore-state', 'Process the whole log file.') { |x| cli.options[:ignore_state] = x }
+  cli.on('--statefile', 'Name of file holding check state.') { |x| cli.options[:statefile] = x }
+  cli.on('--user-action-log', "File containing broker's user action log") { |x| cli.options[:user_action_log] = x }
+  cli.parse
+
+  opt              = cli.options
+  $log             = Log.new(:file,:info,"#{$0}.log")
+  $zabbix_sender   = ZabbixSender.new(opt[:server], :port=>opt[:port], :log=>$log)
+  $verbose         = opt[:verbose]
+  $user_action_log = opt[:user_action_log] || UserActionLog
+  state_filename   = opt[:statefile] || "#{$0}.state"
+
+  # We only care about lines written to the log since the last time we looked.
+  # We use Marshal to write a timestamp file that tracks our last run.
+  # We also marshal an array of the names of the actions we've seen. This
+  # allows us to write zeroes for any items that didn't have new actions since
+  # our last run.
+  state = StateFile.new(state_filename)
+  state.load
+  seen_actions = state.state[1] || []
+
+  # Use a sane default if we fail to load from our state file or the user
+  # requests ignoring the last check time.
+  if opt[:ignore_state]
+    $last_check_time = Time.local(2000,1,1,0,0,0).to_i
+  else
+    $last_check_time = state.state[0] || Time.local(2000,1,1,0,0,0)
+    $last_check_time = $last_check_time.to_i
+  end
+
+  # The real work is done here.
+  bench = Benchmark.realtime {
+    actions = parse_action_log
+    seen_actions = collect_stats(actions, seen_actions)
+
+    done_str = "#{actions.count} actions processed."
+    $log.puts(done_str) if $verbose
+  }
+  state.save([Time.now, seen_actions])
+
+  $zabbix_sender.add_entry('openshift_user_action_stats_collection_time', bench)
+  $zabbix_sender.send_data($verbose)
+
+  puts 0
+end
+
+__END__

@@ -23,13 +23,22 @@ require 'ostruct'
 class Log
   attr_accessor :stdout, :stderr, :syslog, :file, :output, :severity
 
+  #
+  # out = selector for where to output logs.
+  #     values - :stdout, :stderr, :file, :syslog
+  #
+  # sev = severity level
+  #     values - :fatal, :error, :warn, :info, :debug, :unknown
+  #
+  # filename = filename used when logging to a file
+  #
   def initialize(out=:stdout,sev=:info,filename=nil)
     @stdout   = Logger.new(STDOUT)
     @stderr   = Logger.new(STDERR)
     @file     = Logger.new(filename) unless filename.nil?
 
     @syslog   = Syslog.open($0, Syslog::LOG_PID, Syslog::LOG_USER)
-    @syslog.close
+    @syslog.close # Don't hold the handle open. We'll reopen as-needed.
 
     @output   = out
     @severity = sev
@@ -49,6 +58,13 @@ class Log
     @output = :file
   end
 
+  #
+  # Here, we figure out where the desired log destination is, map that to the
+  # appropriate ruby library, correct method semantics, and correct severity
+  # names.
+  #
+  # Ugly, but effective.
+  #
   def puts(msg, sev=@severity)
     if @@output_map[@output] == :logger
       eval "#{@output.to_s}.#{map_output.log_method.to_s}(#{map_severity(sev)}) { msg }"
@@ -113,6 +129,7 @@ class Log
     :syslog => :syslog,
   }
 
+  # helper methods to jump through the necessary hoops
   def map_output
     eval "@@#{@@output_map[@output].to_s}"
   end
