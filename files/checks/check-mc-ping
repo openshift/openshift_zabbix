@@ -22,37 +22,70 @@
 #   reporting a final sucess/failure result.
 #
 require_relative '../lib/zabbix_sender'
-require_relative '../lib/mco_ping'
+require_relative '../lib/openshift_mcollective'
 require_relative '../lib/openshift_mongo'
 require_relative '../lib/utils/log'
 require_relative '../lib/utils/cli_opts'
 
 require 'facter'
 
+def get_mco_hosts
+  mco_hosts = []
+  begin
+    omco      = OpenShiftMCollective.new(:verbose=>$verbose)
+    responses = omco.get_nodes_facts(['fqdn'], true)
+
+    responses.each do |response|
+      begin
+        if response[:statuscode] == 0         &&
+            response.results.include?(:data)  &&
+            response[:data].include?(:output) &&
+            response[:data][:output].include?(:fqdn)
+
+          mco_hosts << response[:data][:output][:fqdn]
+        end
+      rescue Exception => ex
+        # If a host throws an exception, other hosts should still get evaluated
+        if $verbose
+          $log.puts "ERROR: #{ex.message}"
+          $log.puts %Q[#{ex.backtrace.join("\n")}]
+        end
+      end
+    end
+  rescue Exception => ex
+    if $verbose
+      $log.puts "ERROR: #{ex.message}"
+      $log.puts %Q[#{ex.backtrace.join("\n")}]
+    end
+  end
+
+  return mco_hosts
+end
+
 def main
   missing_hosts  = []
   district_hosts = []
   retries        = MAX_RETRIES
-  log            = Log.new
+  $log           = Log.new
 
   begin
     district_hosts = OpenShiftMongo.new(OpenShiftMongo.get_broker_mongo_config).get_district_nodes
-    mc_ping_hosts  = MCOPing.get_mc_ping_hosts
-    missing_hosts  = district_hosts - mc_ping_hosts
+    mco_hosts      = get_mco_hosts
+    missing_hosts  = district_hosts - mco_hosts
     retries -= 1
 
     has_problem = (missing_hosts.size > 0) || (district_hosts.size == 0)
 
     if has_problem && retries > 0
-      log.puts "Problem detected, sleeping #{TIME_BETWEEN_RETRIES} seconds" if $verbose
+      $log.puts "Problem detected, sleeping #{TIME_BETWEEN_RETRIES} seconds" if $verbose
       sleep TIME_BETWEEN_RETRIES
-      log.puts "retrying check (#{retries} retries left)" if $verbose
+      $log.puts "retrying check (#{retries} retries left)" if $verbose
     end
   end while has_problem && retries > 0
 
-  zs  = ZabbixSender.new($opts[:server], :port => $opts[:port], :log => log)
+  zs  = ZabbixSender.new($opts[:server], :port => $opts[:port], :log => $log)
 
-  log.puts "Missing these hosts for per host check:" if $verbose && missing_hosts.size > 0
+  $log.puts "Missing these hosts for per host check:" if $verbose && missing_hosts.size > 0
 
   #Per Host Reporting
   if $opts[:perhost]
@@ -60,7 +93,7 @@ def main
       zbx_val = 0
       if missing_hosts.include?(host)
         zbx_val = 1 # Report this host
-        log.puts "#{host}" if $verbose
+        $log.puts "#{host}" if $verbose
       end
 
       zs.add_entry("mco_host_ping", zbx_val, host)
@@ -70,12 +103,12 @@ def main
   # Per Broker Reporting
   zbx_val = nil
   if district_hosts.size == 0
-    log.puts "\n\nFailed to get hosts in all districts\n\n" if $verbose
+    $log.puts "\n\nFailed to get hosts in all districts\n\n" if $verbose
     zbx_val = 1 # Alert to the fact that district hosts are missing
   else
     if $verbose && missing_hosts.length > 0
-      log.puts "Missing these hosts for per broker check:"
-      missing_hosts.each { |host| log.puts "#{host}" }
+      $log.puts "Missing these hosts for per broker check:"
+      missing_hosts.each { |host| $log.puts "#{host}" }
     end
     zbx_val = missing_hosts.length
   end
@@ -87,8 +120,8 @@ end
 if __FILE__ == $0
   cli = CLIOpts.new
   cli.on('--retries NUM', Integer, 'Max. number of retries (Default: 3)') { |x| cli.options[:retries] = x }
-  cli.on('--delay NUM', Integer, 'Seconds between retries (Default: 5)') { |x| cli.options[:delay] = x }
-  cli.on('--[no-]per-host', 'Do per-host reporting. (Default: false}') { |x| cli.options[:perhost] = x }
+  cli.on('--delay NUM', Integer, 'Seconds between retries (Default: 5)')  { |x| cli.options[:delay]   = x }
+  cli.on('--[no-]per-host', 'Do per-host reporting. (Default: false}')    { |x| cli.options[:perhost] = x }
   cli.parse
 
   $opts    = cli.options
@@ -99,3 +132,5 @@ if __FILE__ == $0
 
   main
 end
+
+__END__
