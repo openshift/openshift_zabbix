@@ -53,7 +53,7 @@ def main(opts)
   end
 
   zs.add_entry("accept_node", an.exitcode)
-  zs.send_data(verbose)
+  zs.send_data(verbose) unless opts[:test]
 end
 
 if __FILE__ == $0

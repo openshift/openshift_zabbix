@@ -114,7 +114,7 @@ def main
   end
   zs.add_entry("mco_broker_ping", zbx_val)
 
-  zs.send_data($verbose)
+  zs.send_data($verbose) unless $opts[:test]
 end
 
 if __FILE__ == $0

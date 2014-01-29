@@ -77,14 +77,18 @@ class CLIOpts
         exit 1
       }
       opts.on('-v', '--[no-]verbose', 'Change verbosity') { |x| @options[:verbose] = x }
-      opts.on('-f', '--file PATH', String, 'YAML configuration file (default: /etc/openshift/openshift_zabbix.conf)') { |x|
+      opts.on('-t', '--test', "Test the script. Skip sending data to Zabbix server") { |x| @options[:test] = x }
+      opts.separator ''
+      opts.on('-f', '--file PATH', String, 'Optional YAML configuration file (default: /etc/openshift/openshift_zabbix.conf)') { |x|
         init_config(x)
         @options[:configfile] = x
       }
+      opts.separator ''
       opts.on('-s', '--server SERVER', 'Zabbix server hostname (default: localhost)') { |x| @options[:server] = x }
       opts.on('-p', '--port PORT', 'Zabbix server port (default: 10050)') { |x| @options[:port] = x }
       opts.on('--user USER', 'Zabbix server login username (default: "admin")') { |x| @options[:user] = x }
       opts.on('--password USER', 'Zabbix server login password (default: "zabbix")') { |x| @options[:passwd] = x }
+      opts.separator ''
     }
   end
 end
