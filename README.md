@@ -2,8 +2,11 @@ OpenShift-Zabbix
 ================
 
 [Summary](#summary)
+
 [Scope](#scope)
+
 [License](#license)
+
 [File Layout](#file%20layout)
 
 
