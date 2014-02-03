@@ -24,6 +24,21 @@ class OpenShiftMongo
 
   CONF_FILE='/etc/openshift/broker.conf'
 
+  #
+  #  conf = {
+  #    :replica_set => Boolean,
+  #    :db          => String,
+  #    :user        => String,
+  #    :password    => String,
+  #    :host_port   => Integer | String,
+  #    # This is hard coded because it's no longer in a conf file
+  #    :collections => {
+  #      :district         => "districts",
+  #      :distributed_lock => "distributed_locks",
+  #      :user             => "cloud_users"
+  #    }
+  #  }
+  #
   def initialize(config)
     @config = config
 
@@ -77,7 +92,7 @@ class OpenShiftMongo
       :password    => conf["MONGO_PASSWORD"],
       :host_port   => conf["MONGO_HOST_PORT"].split(','),
 
-      # This one is hard coded because it's no longer in a conf file
+      # This is hard coded because it's no longer in a conf file
       :collections => {
         :district         => "districts",
         :distributed_lock => "distributed_locks",

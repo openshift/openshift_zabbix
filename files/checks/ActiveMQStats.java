@@ -16,10 +16,10 @@
    Purpose: Monitor JVM details for ActiveMQ
 
    Build Command:
-        javac -cp /usr/lib/jvm/java-1.7.0-openjdk/lib/tools.jar ActiveMQStats.java
+        javac -cp $JAVA_HOME/lib/tools.jar ActiveMQStats.java
 
    Run:
-        java -cp .:/usr/lib/jvm/java-1.7.0-openjdk/lib/tools.jar ActiveMQStats
+        java -cp /path/to/ActiveMQStats.class ActiveMQStats
 */
 
 import java.lang.management.*;

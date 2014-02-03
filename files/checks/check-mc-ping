@@ -21,6 +21,11 @@
 #   timeouts, the script will retry a configurable number of times before
 #   reporting a final sucess/failure result.
 #
+#   This script can do two types of reporting, depending on how the output
+#   should be reported to zabbix. The 'per-host' flag enables consumers to
+#   choose whether to report across items on each host, or to report to an item
+#   on each broker.
+#
 require_relative '../lib/zabbix_sender'
 require_relative '../lib/openshift_mcollective'
 require_relative '../lib/openshift_mongo'
@@ -29,6 +34,7 @@ require_relative '../lib/utils/cli_opts'
 
 require 'facter'
 
+# This 'ping' is simply checking Facter('fqdn') on each remote host.
 def get_mco_hosts
   mco_hosts = []
   begin

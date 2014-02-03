@@ -145,7 +145,7 @@ class AcceptNode
             dir_size = %x[du -s #{uuid}].split()[0].to_i
             # Make sure uuid dir is > 0 (because to_i returns 0 on failure)
             # and < 100k before deleting
-            @log.stdout.debug "\n#{uuid} directory size: #{dir_size}K" if @verbose
+            @log.stdout.debug "#{uuid} directory size: #{dir_size}K" if @verbose
             if dir_size > 0 && dir_size < 100
               #FIXME: replace with FileUtils.rm_rf
               cmd = "/bin/rm -rf #{uuid}"
@@ -171,7 +171,7 @@ class AcceptNode
     # If the gear is invalid, then clearly it couldn't have been deleted
     return false unless valid_gear_uuid?(uuid)
 
-    @log.stdout.debug "\nChecking if gear #{uuid} has been deleted from the system... " if @verbose
+    @log.stdout.debug "Checking if gear #{uuid} has been deleted from the system... " if @verbose
     if File.readlines("/var/log/mcollective.log").grep(/(app-destroy|oo_app_destroy).*#{uuid}/).any?
       @log.stdout.debug "Gear has been deleted." if @verbose
       return true
@@ -182,7 +182,7 @@ class AcceptNode
   end
 
   def valid_gear_uuid?(uuid)
-    @log.stdout.debug "\nChecking if gear #{uuid} is a valid format... " if @verbose
+    @log.stdout.debug "Checking if gear #{uuid} is a valid format... " if @verbose
     if uuid.size >= 24 && ( uuid =~ /\A[a-z0-9]{32}\z/  ||  uuid =~ /\A[a-z0-9]{24}\z/ )
       @log.stdout.debug "Gear has a valid format." if @verbose
       return true

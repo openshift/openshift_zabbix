@@ -51,10 +51,9 @@ class OpenShiftMCollective
     verbose = args[:verbose] || false
 
     options               = MCollective::Util.default_options
-    options[:verbose]     = verbose
+    options[:verbose]     = verbose             || false
     options[:disctimeout] = args[:disc_timeout] || DefaultTimeout[:discovery]
     options[:timeout]     = args[:timeout]      || DefaultTimeout[:general]
-
     @max_call_timeout     = args[:call_timeout] || DefaultTimeout[:max_call]
 
     @mc = rpcclient(agent, {:options => options})

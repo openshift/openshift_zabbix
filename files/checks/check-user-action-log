@@ -90,8 +90,6 @@ def collect_stats(user_actions, seen_actions=[])
 end
 
 if __FILE__ == $0
-  start_time = Time.now
-
   cli = CLIOpts.new
   cli.on('-i', '--ignore-state', 'Process the whole log file.') { |x| cli.options[:ignore_state] = x }
   cli.on('--statefile', 'Name of file holding check state.') { |x| cli.options[:statefile] = x }
@@ -105,9 +103,9 @@ if __FILE__ == $0
   $user_action_log = opt[:user_action_log] || UserActionLog
   state_filename   = opt[:statefile] || "#{$0}.state"
 
-  # We only care about lines written to the log since the last time we looked.
-  # We use Marshal to write a timestamp file that tracks our last run.
-  # We also marshal an array of the names of the actions we've seen. This
+  # Only care about lines written to the log since the last time it was checked.
+  # Use Marshal to write a timestamp file that tracks our last run.
+  # Also marshal an array of the names of the actions that were seen. This
   # allows us to write zeroes for any items that didn't have new actions since
   # our last run.
   state = StateFile.new(state_filename)

@@ -29,6 +29,10 @@ def main(opts)
   verbose = opts[:verbose]
 
   an = AcceptNode.new(verbose)
+
+  # The idea here is to run oo-accept-node a couple of times, attempting to
+  # self-correct any known issues before reporting a hard failure.
+  #
   1.upto(MAX_RETRIES) do |i|
     log.puts "Try #{i} / #{MAX_RETRIES}:" if verbose
 
