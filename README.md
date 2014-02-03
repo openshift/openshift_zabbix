@@ -48,7 +48,8 @@ File Layout
     |-- files/           - Static files
     |   |-- checks/      - Monitoring check scripts
     |   |-- lib/         - Libraries used by checks
-    |   `-- userparams/  - Zabbix userparameter configuration files
+    |   |-- userparams/  - Zabbix userparameter configuration files
+    |   `-- xml/         - XML template files defining Zabbix Templates.
     |-- manifests/       - Puppet configuration manifests
     `-- templates/       - ERB Templated files
         |-- checks/      - ERB Templated monitoring check scripts
