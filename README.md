@@ -1,14 +1,12 @@
 OpenShift-Zabbix
 ================
 
-[Summary](#summary)
-
-[Scope](#scope)
-
-[License](#license)
-
-[File Layout](#file%20layout)
-
+* [Summary](#summary)
+* [Scope](#scope)
+* [License](#license)
+* [File Layout](#file-layout)
+* [Prerequisites](#prerequisites)
+* [Getting Started](#getting-started)
 
 Summary
 =======
@@ -56,3 +54,26 @@ File Layout
         |-- lib/         - ERB Templated Libraries used by checks
         `-- userparams/  - ERB Templated Zabbix userparameter configuration files
 
+Prerequisites
+=============
+
+* Zabbix server
+* OpenShift Origin/Enterprise installation
+* Puppet server (optional)
+    * puppetlabs-stdlib
+
+Getting Started
+===============
+
+1. Import the XML templates from *openshift_zabbix/files/xml/* directory into
+   your Zabbix server.
+1. (Optional) Add the openshift\_zabbix module into your Puppet code repository,
+   and integrate it into your manifests.
+1. Deploy *openshift_zabbix/files/{checks,lib}* onto your OpenShift broker,
+   node, and messaging (ActiveMQ) server as documented in
+   *openshift_zabbix/manifests*.
+1. (Optional) Use *openshift_zabbix/files/openshift_zabbix.conf.sample* as an
+   example of how to deploy common configuration settings to your OpenShift
+   systems. All openshift\_zabbix check scripts accept either command-line
+   arguments or a YAML configuration file.
+   (default: /etc/openshift/openshift\_zabbix.conf)
