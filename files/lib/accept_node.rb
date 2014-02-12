@@ -72,7 +72,7 @@ class AcceptNode
       msg = "Cleaning up cgroups by running: #{cmd}"
       exec_cmd(cmd, msg)
 
-      #FIXME: replace with Process.kill()
+      #FIXME: replace with Process.kill(), if possible
       cmd = "/usr/bin/killall -9 -u #{uuid}"
       msg = "Killing all user processes by running: #{cmd}"
       exec_cmd(cmd, msg)
@@ -93,10 +93,10 @@ class AcceptNode
       # Skip unless pid is valid
       next unless pid.is_a?(Fixnum) && pid >= 2
 
-      #FIXME: replace with Process.kill()
-      cmd = "/bin/kill -9 #{pid}"
-      msg = "Cleaning up unowned gear processes with: #{cmd}"
-      exec_cmd(cmd, msg)
+      msg = "Cleaning up unowned gear processes by sending SIGKILL to pid #{pid}"
+      @log.stdout.debug(msg) if @verbose
+      @log << msg
+      Process.kill('KILL', pid)
     end
   end
 
@@ -147,10 +147,10 @@ class AcceptNode
             # and < 100k before deleting
             @log.stdout.debug "#{uuid} directory size: #{dir_size}K" if @verbose
             if dir_size > 0 && dir_size < 100
-              #FIXME: replace with FileUtils.rm_rf
-              cmd = "/bin/rm -rf #{uuid}"
-              msg = "PWD: #{Dir.pwd}, Cleaning up partially deleted gear by running: #{cmd}"
-              exec_cmd(cmd, msg)
+              msg = "PWD: #{Dir.pwd}, Cleaning up partially deleted gear by removing /var/lib/openshift/#{uuid}"
+              @log.stdout.debug(msg) if @verbose
+              @log << msg
+              FileUtils.rm_rf(uuid, :secure=>true)
             end
           end
         end

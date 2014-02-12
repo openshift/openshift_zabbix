@@ -25,7 +25,10 @@ class OpenShiftMongo
   CONF_FILE='/etc/openshift/broker.conf'
 
   #
-  #  conf = {
+  # The config argument is intended to be constructed using the
+  # self.get_broker_mongo_config() class method.
+  #
+  #  config = {
   #    :replica_set => Boolean,
   #    :db          => String,
   #    :user        => String,
