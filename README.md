@@ -60,7 +60,8 @@ Prerequisites
 * Zabbix server
 * OpenShift Origin/Enterprise installation
 * Puppet server (optional)
-    * puppetlabs-stdlib
+    * [puppetlabs-stdlib](https://forge.puppetlabs.com/puppetlabs/stdlib)
+* [Zbxapi](https://rubygems.org/gems/zbxapi)
 
 Getting Started
 ===============

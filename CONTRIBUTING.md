@@ -1,14 +1,13 @@
 OpenShift-Zabbix Contributor Guidelines
 =======================================
 
-[Summary](#summary)
-
-[Communication](#communication)
-
-* [Google+](#google)
-* [IRC](#irc)
-* [Mailing list](#mailing-list)
-* [Twitter](#twitter)
+* [Summary](#summary)
+* [Communication](#communication)
+    * [Google+](#google)
+    * [IRC](#irc)
+    * [Mailing list](#mailing-list)
+    * [Twitter](#twitter)
+* [Conventions](#conventions)
 
 Summary
 =======
@@ -50,6 +49,24 @@ may join freely at
 ### Twitter ###
 
 Follow [@openshift](https://twitter.com/openshift) and
-@openshift_ops](https://twitter.com/openshift) on Twitter.
+[@openshift\_ops](https://twitter.com/openshift_ops) on Twitter.
 
+Conventions
+===========
 
+In general, the primary guideline is to follow the best practices for the
+languages and tools being used.
+
+### Languages ###
+
+The default language for the OpenShift Zabbix checks is Ruby. Unless there's a
+specific reason, all new checks should use Ruby.
+
+e.g. interfacing with ActiveMQ requires running within the JVM, which
+means the ActiveMQ check uses Java to collect its metrics.
+
+### File Naming ###
+
+* Check scripts should omit an extension. (i.e. no '.rb')
+* Libraries should follow Ruby best practices for file naming.
+  (i.e.  snake\_case.rb)
