@@ -56,9 +56,7 @@ class openshift_zabbix::msgbus {
     }
 
     exec { 'javac_activemq_stats':
-        command => "#{$java_home}/bin/javac -cp #{$java_home}/lib/tools.jar -d #{$script_dir} #{$script_dir}/ActiveMQStats.java",
-        creates => "#{$script_dir}/ActiveMQStats.class"
+        command => "${java_home}/bin/javac -cp ${java_home}/lib/tools.jar -d ${script_dir} ${script_dir}/ActiveMQStats.java",
+        creates => "${script_dir}/ActiveMQStats.class"
     }
 }
-
-

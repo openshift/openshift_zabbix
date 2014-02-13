@@ -31,7 +31,7 @@
 class openshift_zabbix::libs {
     $script_dir = '/usr/share/zabbix'
 
-    file { "#{$script_dir}/lib":
+    file { "${script_dir}/lib":
         ensure       => directory,
         source       => 'puppet:///modules/openshift_zabbix/lib',
         recurse      => true,
