@@ -1,5 +1,5 @@
-name 'openshift_zabbix'
-version '0.1'
+name 'openshiftops-openshift_zabbix'
+version '0.1.0'
 author 'Red Hat'
 license 'ASL 2.0'
 project_page 'https:/github.com/openshift/openshift_zabbix'
