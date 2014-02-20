@@ -1,0 +1,19 @@
+# This is a sample YAML-based config file
+#
+# The OpenShift Zabbix scripts will accept values passed either by CLI or using
+# a config file like this.
+#
+# Zabbix Server host name
+:host: 'localhost'
+
+# Zabbix sender port
+:port: 10051
+
+# Zabbix login username (must have API access)
+:user: 'admin'
+
+# Zabbix login password (must have API access)
+:password: 'zabbix'
+
+# Verbosity toggle
+:verbose: true

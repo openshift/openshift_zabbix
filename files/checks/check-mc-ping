@@ -1,0 +1,142 @@
+#!/usr/bin/env oo-ruby
+#
+#   Copyright 2013 Red Hat Inc.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+# Purpose:
+#   Checks that all district nodes are seen by mco ping.
+#
+#   Due to the potential for MCollective to have transient failures or
+#   timeouts, the script will retry a configurable number of times before
+#   reporting a final sucess/failure result.
+#
+#   This script can do two types of reporting, depending on how the output
+#   should be reported to zabbix. The 'per-host' flag enables consumers to
+#   choose whether to report across items on each host, or to report to an item
+#   on each broker.
+#
+require_relative '../lib/zabbix_sender'
+require_relative '../lib/openshift_mcollective'
+require_relative '../lib/openshift_mongo'
+require_relative '../lib/utils/log'
+require_relative '../lib/utils/cli_opts'
+
+require 'facter'
+
+# This 'ping' is simply checking Facter('fqdn') on each remote host.
+def get_mco_hosts
+  mco_hosts = []
+  begin
+    omco      = OpenShiftMCollective.new(:verbose=>$verbose)
+    responses = omco.get_nodes_facts(['fqdn'], true)
+
+    responses.each do |response|
+      begin
+        if response[:statuscode] == 0         &&
+            response.results.include?(:data)  &&
+            response[:data].include?(:output) &&
+            response[:data][:output].include?(:fqdn)
+
+          mco_hosts << response[:data][:output][:fqdn]
+        end
+      rescue Exception => ex
+        # If a host throws an exception, other hosts should still get evaluated
+        if $verbose
+          $log.puts "ERROR: #{ex.message}"
+          $log.puts %Q[#{ex.backtrace.join("\n")}]
+        end
+      end
+    end
+  rescue Exception => ex
+    if $verbose
+      $log.puts "ERROR: #{ex.message}"
+      $log.puts %Q[#{ex.backtrace.join("\n")}]
+    end
+  end
+
+  return mco_hosts
+end
+
+def main
+  missing_hosts  = []
+  district_hosts = []
+  retries        = MAX_RETRIES
+  $log           = Log.new
+
+  begin
+    district_hosts = OpenShiftMongo.new(OpenShiftMongo.get_broker_mongo_config).get_district_nodes
+    mco_hosts      = get_mco_hosts
+    missing_hosts  = district_hosts - mco_hosts
+    retries -= 1
+
+    has_problem = (missing_hosts.size > 0) || (district_hosts.size == 0)
+
+    if has_problem && retries > 0
+      $log.puts "Problem detected, sleeping #{TIME_BETWEEN_RETRIES} seconds" if $verbose
+      sleep TIME_BETWEEN_RETRIES
+      $log.puts "retrying check (#{retries} retries left)" if $verbose
+    end
+  end while has_problem && retries > 0
+
+  zs  = ZabbixSender.new($opts[:server], :port => $opts[:port], :log => $log)
+
+  $log.puts "Missing these hosts for per host check:" if $verbose && missing_hosts.size > 0
+
+  #Per Host Reporting
+  if $opts[:perhost]
+    district_hosts.each do |host|
+      zbx_val = 0
+      if missing_hosts.include?(host)
+        zbx_val = 1 # Report this host
+        $log.puts "#{host}" if $verbose
+      end
+
+      zs.add_entry("mco_host_ping", zbx_val, host)
+    end
+  end
+
+  # Per Broker Reporting
+  zbx_val = nil
+  if district_hosts.size == 0
+    $log.puts "\n\nFailed to get hosts in all districts\n\n" if $verbose
+    zbx_val = 1 # Alert to the fact that district hosts are missing
+  else
+    if $verbose && missing_hosts.length > 0
+      $log.puts "Missing these hosts for per broker check:"
+      missing_hosts.each { |host| $log.puts "#{host}" }
+    end
+    zbx_val = missing_hosts.length
+  end
+  zs.add_entry("mco_broker_ping", zbx_val)
+
+  zs.send_data($verbose) unless $opts[:test]
+end
+
+if __FILE__ == $0
+  cli = CLIOpts.new
+  cli.on('--retries NUM', Integer, 'Max. number of retries (Default: 3)') { |x| cli.options[:retries] = x }
+  cli.on('--delay NUM', Integer, 'Seconds between retries (Default: 5)')  { |x| cli.options[:delay]   = x }
+  cli.on('--[no-]per-host', 'Do per-host reporting. (Default: false}')    { |x| cli.options[:perhost] = x }
+  cli.parse
+
+  $opts    = cli.options
+  $verbose = $opts[:verbose]
+
+  MAX_RETRIES          = $opts[:retries] || 3
+  TIME_BETWEEN_RETRIES = $opts[:delay]   || 5 # seconds
+
+  main
+end
+
+__END__
