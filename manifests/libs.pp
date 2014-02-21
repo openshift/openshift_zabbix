@@ -28,8 +28,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-class openshift_zabbix::libs {
+class openshift_zabbix::libs (
     $script_dir = '/usr/share/zabbix'
+) {
 
     file { "${script_dir}/lib":
         ensure       => directory,

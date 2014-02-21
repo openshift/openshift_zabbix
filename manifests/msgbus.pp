@@ -32,8 +32,9 @@ class openshift_zabbix::msgbus (
     $script_dir = '/usr/share/zabbix',
     $java_home  = '/usr/lib/jvm/java'
 ) {
-    include ::openshift_zabbix::libs
-
+    ensure_resource('class', '::openshift_zabbix::libs', {
+        script_dir => $script_dir
+    })
 
     file {
         "${script_dir}/ActiveMQStats.java":
