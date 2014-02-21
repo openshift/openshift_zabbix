@@ -29,7 +29,7 @@
 # limitations under the License.
 #
 class openshift_zabbix::libs (
-    $script_dir = '/usr/share/zabbix'
+    $script_dir = '/usr/share/zabbix/lib'
 ) {
 
     file { "${script_dir}/lib":

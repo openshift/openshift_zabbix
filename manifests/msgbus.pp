@@ -29,11 +29,11 @@
 # limitations under the License.
 #
 class openshift_zabbix::msgbus (
-    $script_dir = '/usr/share/zabbix',
+    $script_dir = '/usr/share/zabbix/bin',
     $java_home  = '/usr/lib/jvm/java'
 ) {
     ensure_resource('class', '::openshift_zabbix::libs', {
-        script_dir => $script_dir
+        script_dir => "${script_dir}/../lib"
     })
 
     file {
