@@ -28,11 +28,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-class openshift_zabbix::msgbus {
+class openshift_zabbix::msgbus (
+    $script_dir = '/usr/share/zabbix',
+    $java_home  = '/usr/lib/jvm/java'
+) {
     include ::openshift_zabbix::libs
 
-    $script_dir = '/usr/share/zabbix'
-    $java_home  = '/usr/lib/jvm/java-1.7.0-openjdk'
 
     file {
         "${script_dir}/ActiveMQStats.java":
