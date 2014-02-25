@@ -26,7 +26,6 @@
 #    queues            13
 #
 
-
 require 'benchmark'
 require 'date'
 require 'facter'
@@ -35,15 +34,17 @@ require_relative '../lib/zabbix_sender'
 require_relative '../lib/utils/cli_opts'
 require_relative '../lib/utils/log'
 
+JAVA_HOME_DEFAULT = '/usr/lib/jvm/java'
+
 if __FILE__ == $0
   cli = CLIOpts.new
   cli.on('-j', '--java-home PATH', String, 'JAVA_HOME path (default: /usr/lib/jvm/java)') { |x| cli.options[:java_home] = x }
   cli.parse
   opts = cli.options
   log  = Log.new
-  java_home = opts[:java_home] || '/usr/lib/jvm/java'
+  java_home = opts[:java_home] || JAVA_HOME_DEFAULT
 
-  unless File.exists?("#{Dir.getwd}/ActiveMQStats.class")
+  unless File.exists?("#{File.dirname($0)}/ActiveMQStats.class")
     if File.exists?("#{java_home}/bin/javac")
       %x[#{java_home}/bin/javac -cp #{java_home}/lib/tools.jar ActiveMQStats.java]
     else
