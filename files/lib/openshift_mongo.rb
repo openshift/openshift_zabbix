@@ -57,10 +57,8 @@ class OpenShiftMongo
   def get_district_nodes()
     hosts = []
 
-    @district_col.find().each do |district|
-      district['server_identities'].each do |node|
-        hosts << node['name']
-      end
+    @district_col.find({}, {:fields => {'servers' => 1, '_id' => 0} }).each do |district_servers|
+        hosts += district_servers['servers'].collect { |node| node['name'] }
     end
 
     return hosts
