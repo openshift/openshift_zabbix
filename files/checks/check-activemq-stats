@@ -53,7 +53,7 @@ if __FILE__ == $0
     end
   end
 
-  rval = %x[#{java_home}/bin/java -cp . ActiveMQStats].split("\n")
+  rval = %x[#{java_home}/bin/java -cp #{File.dirname($0)} ActiveMQStats].split("\n")
 
   zs = ZabbixSender.new(opts[:server], :port=>opts[:port], :log=>log)
   rval.each do |key_value|
