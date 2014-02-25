@@ -4,7 +4,7 @@
 # a config file like this.
 #
 # Zabbix Server host name
-:host: 'localhost'
+:server: 'localhost'
 
 # Zabbix sender port
 :port: 10051
