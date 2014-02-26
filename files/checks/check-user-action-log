@@ -27,7 +27,9 @@ require_relative '../lib/utils/cli_opts'
 require_relative '../lib/utils/log'
 require_relative '../lib/utils/state'
 
-UserActionLog = '/var/log/openshift/broker/user_action.log'
+UserActionLog    = '/var/log/openshift/broker/user_action.log'
+DefaultLogFile   = "/var/log/#{File.basename($0)}.log"
+DefaultStateFile = "/var/lib/#{File.basename($0)}.state"
 
 $parse_errors = 0
 
@@ -92,16 +94,18 @@ end
 if __FILE__ == $0
   cli = CLIOpts.new
   cli.on('-i', '--ignore-state', 'Process the whole log file.') { |x| cli.options[:ignore_state] = x }
-  cli.on('--statefile', 'Name of file holding check state.') { |x| cli.options[:statefile] = x }
+  cli.on('--statefile', "Name of file holding check state. (Default: #{DefaultStateFile}") { |x| cli.options[:statefile] = x }
   cli.on('--user-action-log', "File containing broker's user action log") { |x| cli.options[:user_action_log] = x }
+  cli.on('--log-to', "Location to write log files (Default: #{DefaultLogFile}") { |x| cli.options[:log_to] = x }
   cli.parse
 
   opt              = cli.options
-  $log             = Log.new(:file,:info,"#{$0}.log")
+  log_to           = opt[:log_to] || DefaultLogFile
+  $log             = Log.new(:file,:info,log_to)
   $zabbix_sender   = ZabbixSender.new(opt[:server], :port=>opt[:port], :log=>$log)
   $verbose         = opt[:verbose]
   $user_action_log = opt[:user_action_log] || UserActionLog
-  state_filename   = opt[:statefile] || "#{$0}.state"
+  state_filename   = opt[:statefile] || DefaultStateFile
 
   # Only care about lines written to the log since the last time it was checked.
   # Use Marshal to write a timestamp file that tracks our last run.
@@ -133,8 +137,6 @@ if __FILE__ == $0
 
   $zabbix_sender.add_entry('openshift_user_action_stats_collection_time', bench)
   $zabbix_sender.send_data($verbose) unless opt[:test]
-
-  puts 0
 end
 
 __END__

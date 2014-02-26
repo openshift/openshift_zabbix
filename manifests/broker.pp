@@ -28,10 +28,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-class openshift_zabbix::broker {
-    include ::openshift_zabbix::libs
-
-    $script_dir = '/usr/share/zabbix'
+class openshift_zabbix::broker (
+    $script_dir = '/usr/share/zabbix/bin'
+) {
+    ensure_resource('class', '::openshift_zabbix::libs', {
+        script_dir => "${script_dir}/../lib"
+    })
 
     file {
         "${script_dir}/check-mc-ping":
@@ -59,19 +61,19 @@ class openshift_zabbix::broker {
     cron {
         'check-mc-ping':
             ensure  => present,
-            command => "${script_dir}/check-mc-ping'",
+            command => "${script_dir}/check-mc-ping",
             minute  => '*/5',
             require => File["${script_dir}/check-mc-ping"];
 
         'check-district-capacity':
             ensure  => present,
-            command => "${script_dir}/check-district-capacity'",
+            command => "${script_dir}/check-district-capacity",
             minute  => '2',
             require => File["${script_dir}/check-district-capacity"];
 
         'check-user-action-log':
             ensure  => present,
-            command => "${script_dir}/check-user-action-log'",
+            command => "${script_dir}/check-user-action-log",
             minute  => '*/5',
             require => File["${script_dir}/check-user-action-log"];
     }

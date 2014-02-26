@@ -21,9 +21,12 @@ require_relative '../lib/accept_node'
 require_relative '../lib/utils/log'
 require_relative '../lib/utils/cli_opts'
 
+DefaultLogFile = "/var/log/#{File.basename($0)}.log"
+
 def main(opts)
-  log = Log.new
-  zs  = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
+  log_to     = opts[:log_to] || DefaultLogFile
+  log        = Log.new(:file,:info,log_to)
+  zs         = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
 
   #turn on verbose reporting
   verbose = opts[:verbose]
@@ -38,8 +41,10 @@ def main(opts)
 
     an.run() # run oo-accept-node
 
-    # work around various bugs
-    if an.exitcode != 0
+    if an.exitcode == 0
+      break
+    else
+      # work around various bugs
       if i == 0
         # cleanup manifest errors on the first run
         an.restart_mcollective
@@ -65,6 +70,7 @@ if __FILE__ == $0
 
   cli = CLIOpts.new
   cli.on('--retries NUM', Integer, 'Max. number of retries (Default: 5)') { |x| cli.options[:retries] = x }
+  cli.on('--log-to', "Location to write log files (Default: #{DefaultLogFile}") { |x| cli.options[:log_to] = x }
   cli.parse
   opts = cli.options
 

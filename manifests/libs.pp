@@ -28,10 +28,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-class openshift_zabbix::libs {
-    $script_dir = '/usr/share/zabbix'
-
-    file { "${script_dir}/lib":
+class openshift_zabbix::libs (
+    $script_dir = '/usr/share/zabbix/lib'
+) {
+    file { $script_dir:
         ensure       => directory,
         source       => 'puppet:///modules/openshift_zabbix/lib',
         recurse      => true,
