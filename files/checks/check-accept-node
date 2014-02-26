@@ -21,7 +21,7 @@ require_relative '../lib/accept_node'
 require_relative '../lib/utils/log'
 require_relative '../lib/utils/cli_opts'
 
-DefaultLogFile = "/var/log/#{$0}.log"
+DefaultLogFile = "/var/log/#{File.basename($0)}.log"
 
 def main(opts)
   log_to     = opt[:log_to] || DefaultLogFile

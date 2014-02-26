@@ -28,8 +28,8 @@ require_relative '../lib/utils/log'
 require_relative '../lib/utils/state'
 
 UserActionLog    = '/var/log/openshift/broker/user_action.log'
-DefaultLogFile   = "/var/log/#{$0}.log"
-DefaultStateFile = "/var/lib/#{$0}.state"
+DefaultLogFile   = "/var/log/#{File.basename($0)}.log"
+DefaultStateFile = "/var/lib/#{File.basename($0)}.state"
 
 $parse_errors = 0
 
