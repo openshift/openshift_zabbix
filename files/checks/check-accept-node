@@ -41,8 +41,10 @@ def main(opts)
 
     an.run() # run oo-accept-node
 
-    # work around various bugs
-    if an.exitcode != 0
+    if an.exitcode == 0
+      break
+    else
+      # work around various bugs
       if i == 0
         # cleanup manifest errors on the first run
         an.restart_mcollective
