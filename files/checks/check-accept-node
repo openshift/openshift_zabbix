@@ -25,7 +25,7 @@ DefaultLogFile = "/var/log/#{File.basename($0)}.log"
 
 def main(opts)
   log_to     = opts[:log_to] || DefaultLogFile
-  $log       = Log.new(:file,:info,log_to)
+  log        = Log.new(:file,:info,log_to)
   zs         = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
 
   #turn on verbose reporting
