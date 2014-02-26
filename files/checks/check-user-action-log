@@ -133,8 +133,6 @@ if __FILE__ == $0
 
   $zabbix_sender.add_entry('openshift_user_action_stats_collection_time', bench)
   $zabbix_sender.send_data($verbose) unless opt[:test]
-
-  puts 0
 end
 
 __END__
