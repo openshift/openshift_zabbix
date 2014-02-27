@@ -62,7 +62,7 @@ class LogFileParser
     begin_date = parse_date(start_line)
     start_diff = parse_date(end_line) - begin_date
 
-    if (@start_time <= begin_date)
+    if ((@start_time <= begin_date) or (File.size(@log) < @byte_offset))
       @log.seek(0) unless @log.pos == 0
     else
       @log.seek(-@byte_offset, File::SEEK_END)
