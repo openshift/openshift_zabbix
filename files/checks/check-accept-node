@@ -44,6 +44,8 @@ def main(opts)
     if an.exitcode == 0
       break
     else
+      log << an.output
+
       # work around various bugs
       if i == 0
         # cleanup manifest errors on the first run
