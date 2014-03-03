@@ -79,20 +79,26 @@ class LogFileParser
       @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
 
       # back up if we've over-estimated.
-      while parse_date(@log.read(@buffer_size).split("\n")[1]) > @start_time
-        num_offsets = validate_offset((num_offsets-1))
-        @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
+      date_line = @log.read(@buffer_size).split("\n")[1]
+      date      = parse_date(date_line)
+      if date.nil?
+        puts "XXX: #{@log.size}, #{date_line}"
+        return
       end
 
-      @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
+      while date > @start_time
+        num_offsets = validate_offset((num_offsets-1))
+        @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
+
+        date_line   = @log.read(@buffer_size).split("\n")[1]
+        date        = parse_date(date_line)
+      end
     end
   end
 
   def validate_offset(offset)
     offset = 0 if offset < 0
-    filesize = @log.stat.size
-    offset = (filesize/@byte_offset) if (offset*@byte_offset) > filesize
-
+    offset = (@log.size/@byte_offset) if (offset*@byte_offset) > @log.size
     return offset
   end
 
