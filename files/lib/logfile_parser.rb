@@ -79,10 +79,12 @@ class LogFileParser
       @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
 
       # back up if we've over-estimated.
-      date_line = @log.read(@buffer_size).split("\n")[1]
+      lines = @log.read(@buffer_size).split("\n")
+      date_line = lines[1]
       date      = parse_date(date_line)
       if date.nil?
-        puts "XXX: #{@log.size}, #{date_line}"
+        require 'pp'
+        pp "XXX: #{@log.size}, #{lines}"
         return
       end
 
