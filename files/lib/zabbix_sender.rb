@@ -64,7 +64,7 @@ class ZabbixSender
   end
 
   def send_data(verbose=@verbose)
-    @log << "Sending:" if verbose
+    @log << "Sending to #{@zabbix_server}:" if verbose
 
     # Create a temporary file for this class (where the data is stored)
     tmpfile = Tempfile.new(self.class.name, "#{@rundir}/")
