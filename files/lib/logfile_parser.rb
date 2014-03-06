@@ -23,7 +23,7 @@ class LogFileParser
   attr_accessor :buffer_size, :byte_offset, :start_time
   attr_accessor :log, :file_size
 
-  @@timestamp_re = /TIMESTAMP=\d{10}/
+  @@timestamp_re = /TIMESTAMP=(\d{10})/
 
   def initialize(fname, start_time=(Time.now-3600).to_i)
     raise ArgumentError unless (File.exists?(fname) and File.readable?(fname))
@@ -111,14 +111,13 @@ class LogFileParser
   # TODO: This is specific to the user_action.log format.
   # TODO: It really should be changed to be more general-purpose.
   def parse_date(line)
-    re = @@timestamp_re
-    m = re.match(line)
+    m = @@timestamp_re.match(line)
 
     if m
       return m[1].to_i
+    else
+      return nil
     end
-
-    return nil
   end
 
   def each(&block)
