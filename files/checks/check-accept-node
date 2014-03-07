@@ -44,6 +44,8 @@ def main(opts)
     if an.exitcode == 0
       break
     else
+      log << an.output
+
       # work around various bugs
       if i == 0
         # cleanup manifest errors on the first run
@@ -70,7 +72,7 @@ if __FILE__ == $0
 
   cli = CLIOpts.new
   cli.on('--retries NUM', Integer, 'Max. number of retries (Default: 5)') { |x| cli.options[:retries] = x }
-  cli.on('--log-to', "Location to write log files (Default: #{DefaultLogFile}") { |x| cli.options[:log_to] = x }
+  cli.on('--log-to LOG', "Location to write log files (Default: #{DefaultLogFile})") { |x| cli.options[:log_to] = x }
   cli.parse
   opts = cli.options
 

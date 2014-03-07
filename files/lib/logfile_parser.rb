@@ -23,12 +23,14 @@ class LogFileParser
   attr_accessor :buffer_size, :byte_offset, :start_time
   attr_accessor :log, :file_size
 
+  @@timestamp_re = /TIMESTAMP=(\d{10})/
+
   def initialize(fname, start_time=(Time.now-3600).to_i)
     raise ArgumentError unless (File.exists?(fname) and File.readable?(fname))
 
     @log         = File.open(fname, 'r')
     @start_time  = start_time
-    @buffer_size = 32 * 1024
+    @buffer_size = 128 * 1024
     @byte_offset = @buffer_size
   end
 
@@ -43,7 +45,7 @@ class LogFileParser
 
     start_line = nil
     buff_lines.each do |line|
-        if line =~ /TIMESTAMP=\d{10}/
+        if line =~ @@timestamp_re
             start_line = line
             break
         end
@@ -52,7 +54,7 @@ class LogFileParser
 
     end_line = nil
     buff_lines.reverse.each do |line|
-        if line =~ /TIMESTAMP=\d{10}/
+        if line =~ @@timestamp_re
             end_line = line
             break
         end
@@ -62,7 +64,7 @@ class LogFileParser
     begin_date = parse_date(start_line)
     start_diff = parse_date(end_line) - begin_date
 
-    if (@start_time <= begin_date)
+    if ((@start_time <= begin_date) or (File.size(@log) < @byte_offset))
       @log.seek(0) unless @log.pos == 0
     else
       @log.seek(-@byte_offset, File::SEEK_END)
@@ -78,35 +80,44 @@ class LogFileParser
 
       @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
 
-      # back up if we've over-estimated.
-      while parse_date(@log.read(@buffer_size).split("\n")[1]) > @start_time
-        num_offsets = validate_offset((num_offsets-1))
-        @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
+      lines = @log.read(@buffer_size).split("\n")
+      date_line = lines.find { |l| l =~ @@timestamp_re }
+      date      = parse_date(date_line)
+
+      # debugging
+      if date.nil?
+        require 'pp'
+        pp "XXX: #{@log.size}, #{lines}"
+        return
       end
 
-      @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
+      # back up if we've over-estimated.
+      while date > @start_time
+        num_offsets = validate_offset((num_offsets-1))
+        @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
+
+        date_line   = @log.read(@buffer_size).split("\n")[1]
+        date        = parse_date(date_line)
+      end
     end
   end
 
   def validate_offset(offset)
     offset = 0 if offset < 0
-    filesize = @log.stat.size
-    offset = (filesize/@byte_offset) if (offset*@byte_offset) > filesize
-
+    offset = (@log.size/@byte_offset) if (offset*@byte_offset) > @log.size
     return offset
   end
 
   # TODO: This is specific to the user_action.log format.
   # TODO: It really should be changed to be more general-purpose.
   def parse_date(line)
-    re = /TIMESTAMP=(\d{10})/
-    m = re.match(line)
+    m = @@timestamp_re.match(line)
 
     if m
       return m[1].to_i
+    else
+      return nil
     end
-
-    return nil
   end
 
   def each(&block)
