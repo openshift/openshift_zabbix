@@ -109,7 +109,7 @@ class Log
     :warn       => Syslog::LOG_WARNING,
     :info       => Syslog::LOG_INFO,
     :debug      => Syslog::LOG_DEBUG,
-    :unknown    => Syslog::LOG_ALERT,
+    :unknown    => Syslog::LOG_ALERT
   )
 
   @@logger = OpenStruct.new(
@@ -119,14 +119,14 @@ class Log
     :warn       => Logger::WARN,
     :info       => Logger::INFO,
     :debug      => Logger::DEBUG,
-    :unknown    => Logger::UNKNOWN,
+    :unknown    => Logger::UNKNOWN
   )
 
   @@output_map = {
     :stdout => :logger,
     :stderr => :logger,
     :file   => :logger,
-    :syslog => :syslog,
+    :syslog => :syslog
   }
 
   # helper methods to jump through the necessary hoops
