@@ -119,6 +119,8 @@ class LogFileParser
   end
 
   def each(&block)
+    return nil if @log.size == 0
+
     find_pos
 
     @log.each_line do |line|
