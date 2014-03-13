@@ -133,7 +133,7 @@ if __FILE__ == $0
     done_str = "#{actions.count} actions processed."
     $log.puts(done_str) if $verbose
   }
-  state.save([Time.now, seen_actions])
+  state.save([Time.now, seen_actions]) unless opt[:test]
 
   $zabbix_sender.add_entry('openshift_user_action_stats_collection_time', bench)
   $zabbix_sender.send_data($verbose) unless opt[:test]

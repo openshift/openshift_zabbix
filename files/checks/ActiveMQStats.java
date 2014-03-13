@@ -16,7 +16,7 @@
    Purpose: Monitor JVM details for ActiveMQ
 
    Build Command:
-        javac -cp $JAVA_HOME/lib/tools.jar ActiveMQStats.java
+        javac -Xlint:unchecked -cp $JAVA_HOME/lib/tools.jar ActiveMQStats.java
 
    Run:
         java -cp /path/to/ActiveMQStats.class ActiveMQStats
@@ -59,36 +59,38 @@ public class ActiveMQStats {
       }
   }
 
-  public static int getMBeans(MBeanServerConnection mbsc, String bname) throws Exception
+  public static HashMap getMBeans(MBeanServerConnection mbsc, String bname) throws Exception
   {
         ObjectName queue = new ObjectName(bname);
-        int count = 0;
+        //int count = 0;
         Set<ObjectInstance> beans = mbsc.queryMBeans(queue, null);
+        HashMap<Object, String> results = new HashMap<Object, String>();
 
-        if (beans.size() == 0) {
-          return 0;
-        } else if (beans.size() == 1) {
-            count = 1;
+        if (beans.size() == 1) {
+            //count = 1;
             ObjectInstance inst = (ObjectInstance) beans.iterator().next();
             MBeanInfo binfo = mbsc.getMBeanInfo(inst.getObjectName());
             MBeanAttributeInfo[] attrs = binfo.getAttributes();
-            System.out.println("Attributes:");
+            //System.out.println("Attributes:");
 
             for (int i =0; i < attrs.length; ++i) {
-                System.out.println(" " + attrs[i].getName() +
-                  ": " + attrs[i].getDescription() +
-                  " (type=" + attrs[i].getType() + ")");
+                //System.out.println(" " + attrs[i].getName() +
+                 //": " + attrs[i].getDescription() +
+                   //(type=" + attrs[i].getType() + ")");
+                //System.out.println("Value: " + mbsc.getAttribute(inst.getObjectName(), attrs[i].getName()));
+                  results.put((Object)attrs[i].getName(), String.format("%s", mbsc.getAttribute(inst.getObjectName(), attrs[i].getName().toString())));
             }
-        } else {
+        } else if (beans.size() > 1){
             Iterator it;
             for (it = beans.iterator(); it.hasNext();) {
                 Object obj = it.next();
                 if (obj instanceof ObjectInstance) {
-                    count += 1;
+                    results.put(obj, "0");
+                    //count += 1;
                 }
             }
         }
-        return count;
+        return results;
   }
 
   public static void main(String args[]) throws Exception {
@@ -128,7 +130,33 @@ public class ActiveMQStats {
 
       /*  QUEUE COUNT */
       String bname = "org.apache.activemq:type=Broker,brokerName=*,destinationType=Queue,destinationName=mcollective.reply*";
-      System.out.println("queues " + getMBeans(mbsc, bname));
+      System.out.println("queues " + getMBeans(mbsc, bname).size());
+
+      /* MBean: mcollective-nodes */
+      /* The Attributes:
+        MemoryUsageByteCount, AverageEnqueueTime, MaxEnqueueTime,
+        MinEnqueueTime, EnqueueCount, QueueSize, MemoryUsagePortion,
+        InFlightCount, ExpiredCount, DispatchCount, DequeueCount
+        ProducerCount, ConsumerCount, MemoryLimit, MaxProducersToAudit
+        MaxAuditDepth, MaxPageSize */
+      List<String> attrs = Arrays.asList(
+        "MemoryUsageByteCount", "AverageEnqueueTime", "MaxEnqueueTime",
+        "MinEnqueueTime", "EnqueueCount", "QueueSize", "MemoryUsagePortion",
+        "InFlightCount", "ExpiredCount", "DispatchCount", "DequeueCount",
+        "ProducerCount", "ConsumerCount", "MemoryLimit", "MaxProducersToAudit",
+        "MaxAuditDepth", "MaxPageSize");
+
+      bname = "org.apache.activemq:type=Broker,brokerName=*,destinationType=Queue,destinationName=mcollective.nodes";
+      HashMap mBeanAttributesHash = getMBeans(mbsc, bname);
+
+      Set resultsSet = mBeanAttributesHash.entrySet();
+      Iterator it = resultsSet.iterator();
+      while(it.hasNext()) {
+         Map.Entry me = (Map.Entry) it.next();
+         if (attrs.contains(me.getKey())) {
+            System.out.println(String.format("%s %s", me.getKey(), me.getValue()));
+         }
+      }
 
       connector.close();
   }

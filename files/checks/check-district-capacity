@@ -22,10 +22,26 @@ require_relative '../lib/utils/cli_opts'
 
 load '/usr/sbin/oo-stats'
 
+def get_district_stats
+  begin
+    stats = OOStats.new
+    stats.gather_statistics
+    return stats.results
+  rescue => e
+    $log.puts e.message
+    $log.puts e.backtrace
+  end
+
+  return nil
+end
+
 def main
-  oostats = OOStats.new
-  oostats.gather_statistics
-  stats = oostats.results
+  stats = get_district_stats
+
+  if stats.nil?
+    $log.error "Unable to gather stats from oo-stats. Exiting..."
+    exit
+  end
 
   zs = ZabbixSender.new($opts[:server], :port=>$opts[:port], :log=>$log)
 
