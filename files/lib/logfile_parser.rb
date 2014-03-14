@@ -24,6 +24,7 @@ class LogFileParser
   attr_accessor :log, :file_size
 
   @@timestamp_re = /TIMESTAMP=(\d{10})/
+  @@datetime_re  = /DATE=(\d{4}-\d{2}-\d{2}) TIME=(\d{2}:\d{2}:\d{2})/
 
   def initialize(fname, start_time=(Time.now-3600).to_i)
     raise ArgumentError unless (File.exists?(fname) and File.readable?(fname))
@@ -84,15 +85,8 @@ class LogFileParser
       date_line = lines.find { |l| l =~ @@timestamp_re }
       date      = parse_date(date_line)
 
-      # debugging
-      if date.nil?
-        require 'pp'
-        pp "XXX: #{@log.size}, #{lines}"
-        return
-      end
-
       # back up if we've over-estimated.
-      while date > @start_time
+      while date > @start_time or date.nil?
         num_offsets = validate_offset((num_offsets-1))
         @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
 
@@ -108,19 +102,25 @@ class LogFileParser
     return offset
   end
 
-  # TODO: This is specific to the user_action.log format.
-  # TODO: It really should be changed to be more general-purpose.
   def parse_date(line)
     m = @@timestamp_re.match(line)
 
     if m
       return m[1].to_i
     else
-      return nil
+      m = @@datetime_re.match(line)
+      if m
+        d = DateTime.strptime("#{m[1]} #{m[2]}", "%Y-%m-%d H:%M:%S")
+        return d.strftime("%s")
+      end
     end
+
+    return nil
   end
 
   def each(&block)
+    return nil if @log.size == 0
+
     find_pos
 
     @log.each_line do |line|
