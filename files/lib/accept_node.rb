@@ -167,18 +167,39 @@ class AcceptNode
     system(cmd)
   end
 
+ 
+  def file_grep?(filename,uuid)
+    file = nil
+    if filename =~ /\.gz|zip/
+       require 'zlib'
+       file = Zlib::GzipReader.open(filename) 
+    elsif filename =~ /\.zip/
+       require 'zip/zip'
+       file = Zip::ZipFile.open(filename)
+    elsif filename =~ /\.bz2/
+       raise "Unsupported Compression: bzip2"
+    else
+       file = File.open(filename)
+    end
+    return file.grep(/(app-destroy|oo_app_destroy).*#{uuid}/).any?
+  end
+
   def gear_deleted?(uuid)
     # If the gear is invalid, then clearly it couldn't have been deleted
     return false unless valid_gear_uuid?(uuid)
 
     @log.stdout.debug "Checking if gear #{uuid} has been deleted from the system... " if @verbose
-    if File.readlines("/var/log/mcollective.log").grep(/(app-destroy|oo_app_destroy).*#{uuid}/).any?
-      @log.stdout.debug "Gear has been deleted." if @verbose
-      return true
-    else
-      @log.stdout.debug "Gear has NOT been deleted." if @verbose
-      return false
+
+    mco_logs = ['/var/log/mcollective.log'] + Dir.glob("/var/log/mcollective*.gz")
+    mco_logs.each do |logfile| 
+        if file_grep?(logfile, uuid)
+            @log.stdout.debug "Gear has been deleted." if @verbose
+            return true
+        end
     end
+    # if it gets this far, gear has not been deleted
+    @log.stdout.debug "Gear has NOT been deleted." if @verbose
+    return false
   end
 
   def valid_gear_uuid?(uuid)
