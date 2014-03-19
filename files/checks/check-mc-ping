@@ -113,22 +113,6 @@ def main(opts)
 
   log.puts "Missing these hosts for per host check:" if verbose && missing_hosts.size > 0
 
-  results = []
-
-  #Per Host Reporting
-  if opts[:perhost]
-    district_hosts.each do |host|
-      zbx_val = 0
-      if missing_hosts.include?(host)
-        zbx_val = 1 # Report this host
-        log.puts "#{host}" if verbose
-      end
-
-      results << SenderItem.new(host, "mco_host_ping", zbx_val)
-      #zs.add_entry("mco_host_ping", zbx_val, host)
-    end
-  end
-
   # Per Broker Reporting
   broker_results = []
   zbx_val = nil
@@ -145,8 +129,19 @@ def main(opts)
   broker_results << SenderItem.new(Facter.fact('fqdn').value, "mco_broker_ping", zbx_val)
   sender(opts[:server], broker_results, log, verbose)
 
-  #send to the proxies
-  if !opts[:test] && opts[:perhost]
+  #Per Host Reporting
+  if opts[:perhost]
+    results = []
+    district_hosts.each do |host|
+      zbx_val = 0
+      if missing_hosts.include?(host)
+        zbx_val = 1 # Report this host
+        log.puts "#{host}" if verbose
+      end
+
+      results << SenderItem.new(host, "mco_host_ping", zbx_val)
+    end
+
     proxy_yaml  = get_zabbix_proxies(opts[:proxy_yaml])
     raise "No proxy yaml config available." if proxy_yaml.config.empty?
     zbx_proxy_host = proxy_yaml.config[:proxy_hosts]
@@ -154,7 +149,7 @@ def main(opts)
     zbx_proxy_host.each do |proxy, hosts|
       next if hosts.nil?
       proxy_results = results.select { |result| hosts.include?(result.host) }
-      sender(proxy, proxy_results, log, verbose)
+      sender(proxy, proxy_results, log, verbose) unless opts[:test]
 
       results -= proxy_results
     end
