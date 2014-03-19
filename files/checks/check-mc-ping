@@ -170,7 +170,6 @@ if __FILE__ == $0
   cli.on('--retries NUM', Integer, 'Max. number of retries (Default: 3)') { |x| cli.options[:retries] = x }
   cli.on('--delay NUM', Integer, 'Seconds between retries (Default: 5)')  { |x| cli.options[:delay]   = x }
   cli.on('--[no-]per-host', 'Do per-host reporting. (Default: false}')    { |x| cli.options[:perhost] = x }
-  cli.on('-f', '--filename file', 'Config file containing zabbix proxy hosts.'){ |x| cli.options[:filename] = x }
   cli.parse
 
   opts = cli.options
