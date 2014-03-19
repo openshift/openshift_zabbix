@@ -36,7 +36,7 @@ class CLIOpts
     @zero = zero
     @args = args
 
-    init_config(config_file)
+    init_config({:filename => config_file})
     init_opts
   end
 
