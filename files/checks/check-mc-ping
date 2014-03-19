@@ -149,7 +149,7 @@ def main(opts)
     zbx_proxy_host.each do |proxy, hosts|
       next if hosts.nil?
       proxy_results = results.select { |result| hosts.include?(result.host) }
-      sender(proxy, proxy_results, log, verbose) unless opts[:test]
+      sender(proxy, proxy_results, log, verbose) unless opts[:test] && proxy_results.size > 0
 
       results -= proxy_results
     end
