@@ -88,7 +88,7 @@ class CLIOpts
       opts.on('-p', '--port PORT', 'Zabbix server port (default: 10050)') { |x| @options[:port] = x }
       opts.on('--user USER', 'Zabbix server login username (default: "admin")') { |x| @options[:user] = x }
       opts.on('--password USER', 'Zabbix server login password (default: "zabbix")') { |x| @options[:passwd] = x }
-      opts.on('--zbx-host', 'Host object in Zabbix under which to store the data.') { |x| @options[:zbx_host] = x }
+      opts.on('--zbx-host HOST', 'Host object in Zabbix under which to store the data.') { |x| @options[:fqdn] = x }
       opts.separator ''
     }
   end
