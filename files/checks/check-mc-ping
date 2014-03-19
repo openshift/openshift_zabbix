@@ -145,7 +145,7 @@ def main(opts)
 
   #send to the proxies
   unless opts[:test]
-    proxy_yaml  = get_zabbix_proxies(opts[:filename])
+    proxy_yaml  = get_zabbix_proxies(opts[:proxy_yaml])
     raise "No proxy yaml config available." if proxy_yaml.config.empty?
     zbx_proxy_host = proxy_yaml.config[:proxy_hosts]
 
