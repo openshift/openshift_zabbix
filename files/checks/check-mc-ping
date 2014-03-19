@@ -130,6 +130,7 @@ def main(opts)
   end
 
   # Per Broker Reporting
+  broker_results = []
   zbx_val = nil
   if district_hosts.size == 0
     log.puts "\n\nFailed to get hosts in all districts\n\n" if verbose
@@ -141,10 +142,11 @@ def main(opts)
     end
     zbx_val = missing_hosts.length
   end
-  results << SenderItem.new(Facter.fact('fqdn').value, "mco_broker_ping", zbx_val)
+  broker_results << SenderItem.new(Facter.fact('fqdn').value, "mco_broker_ping", zbx_val)
+  sender(opts[:server], broker_results, log, verbose)
 
   #send to the proxies
-  unless opts[:test]
+  if !opts[:test] && opts[:perhost]
     proxy_yaml  = get_zabbix_proxies(opts[:proxy_yaml])
     raise "No proxy yaml config available." if proxy_yaml.config.empty?
     zbx_proxy_host = proxy_yaml.config[:proxy_hosts]
