@@ -15,18 +15,26 @@
 # Purpose: Reads a YAML config file. Nothing too fancy.
 
 require 'yaml'
+require 'etc'
 
 class ConfigFile
-  attr_accessor :filename, :config
+  attr_accessor :filename, :config, :uid, :gid, :mode
 
-  def initialize(filename)
-    @filename = filename
+  def initialize(opts)
+    @filename = opts[:filename]
+    @uid      = opts[:uid]  || Process.euid
+    @gid      = opts[:gid]  || Process.egid
+    @mode     = opts[:mode] || 0640
     load_config
   end
 
   def get
     load_config if @config.nil?
     return @config
+  end
+
+  def set(data)
+    write_config(data)
   end
 
   private
@@ -37,6 +45,15 @@ class ConfigFile
     else
       @config = Hash.new(nil)
     end
+  end
+
+  def write_config(data)
+    File.open(@filename, 'w') do |file|
+        file.write data.to_yaml
+    end
+    FileUtils.chown(@uid, @gid, @filename)
+    @mode = @mode.to_i(8) if @mode.is_a?(String)
+    FileUtils.chmod(@mode, @filename)
   end
 
 end
