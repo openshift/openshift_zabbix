@@ -87,6 +87,7 @@ class AcceptNode
     pids = []
     @output.split("\n").each do |line|
       pids << $1.strip.to_i if line =~ /^FAIL: Process (\d+) is owned by a gear that's no longer on the system, uid:/
+      pids << $1.strip.to_i if line =~ /^FAIL: Process (\d+) exists for uid (\d+); uid is in the gear uid range but not a gear user/
     end
 
     pids.each do |pid|
