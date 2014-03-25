@@ -87,6 +87,8 @@ class AcceptNode
     pids = []
     @output.split("\n").each do |line|
       pids << $1.strip.to_i if line =~ /^FAIL: Process (\d+) is owned by a gear that's no longer on the system, uid:/
+
+      pids << $1.strip.to_i if line =~ /^FAIL: Process (\d+) exists for uid (\d+); uid is in the gear uid range but not a gear user/
     end
 
     pids.each do |pid|
@@ -117,8 +119,8 @@ class AcceptNode
   end
 
   def restart_mcollective
-    if @output =~ /^FAIL: (no manifest in the cart repo matches|error with manifest file|cart repo version is older than)/
-      cmd = "/sbin/service mcollective restart"
+    if @output =~ /^FAIL: (no manifest in the cart repo matches|error with manifest file|cart repo version is older than|cart repo version mismatch for)/
+      cmd = "/sbin/service ruby193-mcollective restart"
       msg = "Cleaning up manifest by running: #{cmd}"
       exec_cmd(cmd, msg)
     end
