@@ -101,8 +101,8 @@ class AcceptNode
       begin
         Process.kill('KILL', pid)
       rescue Errno::ESRCH => e
-        @log.stdout.debug(e.msg) if @verbose
-        @log << e.msg
+        @log.stdout.debug(e.message) if @verbose
+        @log << e.message
       end
     end
   end
