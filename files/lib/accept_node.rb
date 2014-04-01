@@ -98,7 +98,12 @@ class AcceptNode
       msg = "Cleaning up unowned gear processes by sending SIGKILL to pid #{pid}"
       @log.stdout.debug(msg) if @verbose
       @log << msg
-      Process.kill('KILL', pid)
+      begin
+        Process.kill('KILL', pid)
+      rescue Errno::ESRCH => e
+        @log.stdout.debug(e.message) if @verbose
+        @log << e.message
+      end
     end
   end
 
