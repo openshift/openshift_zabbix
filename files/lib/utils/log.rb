@@ -69,15 +69,15 @@ class Log
   def set_threshold(level=:info, out=:all)
     case out
     when :all
-      @stdout.level = @@logger[level]
-      @stderr.level = @@logger[level]
-      @file.level = @@logger[level] unless @file.nil?
+      @stdout.level = map_severity(:stdout, level)
+      @stderr.level = map_severity(:stderr, level)
+      @file.level = map_severity(:file, level) unless @file.nil?
     when :stdout
-      @stdout.level = @@logger[level]
+      @stdout.level = map_severity(:stdout, level)
     when :stderr
-      @stderr.level = @@logger[level]
+      @stderr.level = map_severity(:stderr, level)
     when :file
-      @file.level = @@logger[level]
+      @file.level = map_severity(:file, level)
     else
       raise "invalid logger specified"
     end
