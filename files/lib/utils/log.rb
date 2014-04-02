@@ -28,29 +28,53 @@ class PlainFormatter < Logger::Formatter
   end
 end
 
-
 class Log
-  attr_accessor :stdout, :stderr, :syslog, :file, :output, :severity
+  attr_accessor :stdout, :stderr, :syslog, :file, :output, :severity, :threshold
 
   #
   # out = selector for where to output logs.
   #     values - :stdout, :stderr, :file, :syslog
   #
-  # sev = severity level
+  # sev = the default severity level at which messages are logged
   #     values - :fatal, :error, :warn, :info, :debug, :unknown
   #
   # filename = filename used when logging to a file
   #
-  def initialize(out=:stdout,sev=:info,filename=nil)
+  def initialize(out=:stdout,threshold=:info,filename=nil,sev=:info)
     @stdout   = Logger.new(STDOUT)
+    @stdout.formatter = PlainFormatter.new
     @stderr   = Logger.new(STDERR)
+    @stderr.formatter = PlainFormatter.new
     @file     = Logger.new(filename) unless filename.nil?
+    set_threshold(threshold)
 
     @syslog   = Syslog.open($0, Syslog::LOG_PID, Syslog::LOG_USER)
     @syslog.close # Don't hold the handle open. We'll reopen as-needed.
 
-    @output   = out
+    if out.is_a?(Array)
+      @output   = out
+    else
+      @output   = [out]
+    end
     @severity = sev
+  end
+
+  # Set log level for one of more loggers
+  def set_threshold(level=:info, out=:all)
+    case out
+    when :all
+      @stdout.level = @@logger[level]
+      @stderr.level = @@logger[level]
+      @file.level = @@logger[level] unless @file.nil?
+    when :stdout
+      @stdout.level = @@logger[level]
+    when :stderr
+      @stderr.level = @@logger[level]
+    when :file
+      @file.level = @@logger[level]
+    else
+      raise "invalid logger specified"
+    end
   end
 
   def close
@@ -75,13 +99,7 @@ class Log
   # Ugly, but effective.
   #
   def puts(msg, sev=@severity)
-    if @@output_map[@output] == :logger
-      eval "#{@output.to_s}.#{map_output.log_method.to_s}(#{map_severity(sev)}) { msg }"
-    elsif @@output_map[@output] == :syslog
-      @syslog.open($0, Syslog::LOG_PID, Syslog::LOG_USER) unless @syslog.opened?
-      eval "#{@output.to_s}.#{map_output.log_method.to_s}(#{map_severity(sev)}, msg)"
-      @syslog.close
-    end
+    @output.each { |out| write_log(msg, sev, out) }
   end
 
   def <<(msg,sev=@severity)
@@ -109,6 +127,16 @@ class Log
   end
 
   private
+
+  def write_log(msg, sev, dest)
+    if @@output_map[dest] == :logger
+      eval "#{dest.to_s}.#{self.class.map_output(dest).log_method.to_s}(#{map_severity(dest, sev)}) { msg }"
+    elsif @@output_map[dest] == :syslog
+      @syslog.open($0, Syslog::LOG_PID, Syslog::LOG_USER) unless @syslog.opened?
+      eval "#{dest.to_s}.#{self.class.map_output(dest).log_method.to_s}(#{map_severity(dest, sev)}, msg)"
+      @syslog.close
+    end
+  end
 
   # Class methods to enable mapping a common nomenclature to the two logging modules
   @@syslog = OpenStruct.new(
@@ -139,12 +167,12 @@ class Log
   }
 
   # helper methods to jump through the necessary hoops
-  def map_output
-    eval "@@#{@@output_map[@output].to_s}"
+  def self.map_output(o)
+    eval "@@#{@@output_map[o].to_s}"
   end
 
-  def map_severity(sev)
-    eval "map_output.#{sev}"
+  def map_severity(o, sev)
+    eval "self.class.map_output(o).#{sev}"
   end
 end
 
