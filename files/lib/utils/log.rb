@@ -59,6 +59,12 @@ class Log
     @severity = sev
   end
 
+  # This is an alias so that the threshold for
+  # all loggers can be set with one assignment
+  def threshold=(level=:info)
+    set_threshold(level)
+  end
+
   # Set log level for one of more loggers
   def set_threshold(level=:info, out=:all)
     case out
