@@ -20,6 +20,15 @@ require 'logger'
 require 'syslog'
 require 'ostruct'
 
+# This formatter is for stdout, where we don't want timestamps or other
+# fancy decorations.
+class PlainFormatter < Logger::Formatter
+  def call(severity, time, progname, msg)
+    msg2str(msg) + "\n"
+  end
+end
+
+
 class Log
   attr_accessor :stdout, :stderr, :syslog, :file, :output, :severity
 
