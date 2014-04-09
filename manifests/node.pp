@@ -31,6 +31,8 @@
 class openshift_zabbix::node (
     $script_dir = '/usr/share/zabbix/bin'
 ) {
+    include ::oo_ops::cmd::rand_sleep
+
     ensure_resource('class', '::openshift_zabbix::libs', {
         script_dir => "${script_dir}/../lib"
     })
