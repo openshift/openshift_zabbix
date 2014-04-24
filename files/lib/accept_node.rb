@@ -139,6 +139,24 @@ class AcceptNode
     end
   end
 
+  # only needed temporarily, to keep up with bz #1089755
+  def platform_log_grep?(filename,uuid)
+    file = nil
+    if filename =~ /\.gz|zip/
+      require 'zlib'
+      file = Zlib::GzipReader.open(filename)
+    elsif filename =~ /\.zip/
+       require 'zip/zip'
+       file = Zip::ZipFile.open(filename)
+    elsif filename =~ /\.bz2/
+       raise "Unsupported Compression: bzip2"
+    else
+       file = File.open(filename)
+    end
+    return file.grep(/attempt to remove .*#{uuid}.* from filesystem failed/).any?
+  end
+
+
   def remove_partially_deleted_gears
     uuids = []
     @output.split("\n").each do |line|
@@ -146,7 +164,7 @@ class AcceptNode
     end
 
     uuids.uniq.each do |uuid|
-      if gear_deleted?(uuid)
+    if gear_deleted?(uuid)
         Dir.chdir("/var/lib/openshift") do
           if File.exists?(uuid)
             dir_size = %x[du -s #{uuid}].split()[0].to_i
@@ -204,6 +222,17 @@ class AcceptNode
             return true
         end
     end
+    # helper for bz 1089755
+    # these gears will not appear to be "deleted" in the mcollective logs, so the usual method fails.
+    # Instead, look at platform logs to determine if there was a delete attempt.
+    platform_logs = ['/var/log/openshift/node/platform.log'] + Dir.glob("/var/log/openshift/node/platform*.gz")
+    platform_logs.each do |logfile|
+      if platform_log_grep?(logfile, uuid)
+          @log.stdout.debug "Gear #{uuid} has been deleted, but delete failed due to bz1089755." if @verbose
+          return true
+      end
+    end   
+
     # if it gets this far, gear has not been deleted
     @log.stdout.debug "Gear has NOT been deleted." if @verbose
     return false
