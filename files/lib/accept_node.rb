@@ -190,7 +190,6 @@ class AcceptNode
               @log.stdout.debug(msg) if @verbose
               @log << msg
               exec_cmd(cmd, msg)
-              #FileUtils.rm_rf(uuid, :secure=>true)
             end
           end
         end
