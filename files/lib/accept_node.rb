@@ -126,7 +126,7 @@ class AcceptNode
   def fix_stale_frontend
     appnames = []
     @output.split("\n").each do |line|
-      appnames << $1.strip if line =~ /^FAIL: httpd config references DNS name without associated gear: (.*)$/
+      appnames << $2.strip if line =~ /^FAIL: httpd config references (DNS name|UUID) without associated gear: (.*)$/
     end
 
     appnames.uniq.each do |appname|
