@@ -86,7 +86,7 @@ class LogFileParser
       date      = parse_date(date_line)
 
       # back up if we've over-estimated.
-      while date > @start_time or date.nil?
+      while date.nil? or date > @start_time
         num_offsets = validate_offset((num_offsets-1))
         @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
 

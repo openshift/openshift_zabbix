@@ -123,6 +123,19 @@ class AcceptNode
     end
   end
 
+  def fix_stale_frontend
+    appnames = []
+    @output.split("\n").each do |line|
+      appnames << $2.strip if line =~ /^FAIL: httpd config references (DNS name|UUID) without associated gear: (.*)$/
+    end
+
+    appnames.uniq.each do |appname|
+      cmd = "/usr/bin/rhc-fix-stale-frontend -b #{appname}"
+      msg = "Cleaning up missing frontend by running: #{cmd}"
+      exec_cmd(cmd, msg)
+    end
+  end
+
   def restart_mcollective
     if @output =~ /^FAIL: (no manifest in the cart repo matches|error with manifest file|cart repo version is older than|cart repo version mismatch for)/
       cmd = "/sbin/service ruby193-mcollective restart"
@@ -160,7 +173,7 @@ class AcceptNode
   def remove_partially_deleted_gears
     uuids = []
     @output.split("\n").each do |line|
-      uuids << $1.strip if line =~ /^FAIL: directory (.*) doesn't have (an associated user|a cartridge directory)/
+      uuids << $1.strip if line =~ /^FAIL: directory (.*) doesn't have (a .ssh directory|a .env directory|a .sandbox directory|a .tmp directory|an associated user|a cartridge directory)/
     end
 
     uuids.uniq.each do |uuid|
@@ -172,10 +185,11 @@ class AcceptNode
             # and < 100k before deleting
             @log.stdout.debug "#{uuid} directory size: #{dir_size}K" if @verbose
             if dir_size > 0 && dir_size < 100
-              msg = "PWD: #{Dir.pwd}, Cleaning up partially deleted gear by removing /var/lib/openshift/#{uuid}"
+              cmd = "/usr/sbin/oo-admin-gear destroygear -c #{uuid}"
+              msg = "PWD: #{Dir.pwd}, Cleaning up partially deleted gear by running #{cmd}"
               @log.stdout.debug(msg) if @verbose
               @log << msg
-              FileUtils.rm_rf(uuid, :secure=>true)
+              exec_cmd(cmd, msg)
             end
           end
         end
