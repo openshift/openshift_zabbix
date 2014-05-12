@@ -60,6 +60,7 @@ def main(opts)
       an.remove_partially_deleted_gears()
       an.restart_cgred()
       an.fix_missing_frontend()
+      an.fix_stale_frontend()
     end
   end
 
