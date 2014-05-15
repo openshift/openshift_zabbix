@@ -30,9 +30,9 @@ class UserAction
     attr_accessor :result, :timestamp, :action, :request_id, :user_id
     attr_accessor :login, :message, :line, :error_count, :debug
 
-    USER_ACTION_LOG_FILE= '/var/log/openshift/broker/user_action.log'
+    USER_ACTION_LOG_FILE= '/var/log/openshift/broker/openshift-broker.log'
 
-    @@line_regex = Regexp.new('^RESULT=(?<result>(SUCCESS|FAILURE)) STATUS=(?<status>\S*) TIMESTAMP=(?<timestamp>\d{10}) DATE=(?<date>\d{4}-\d{2}-\d{2}) TIME=(?<time>\d{2}:\d{2}:\d{2}) ACTION=(?<action>\S*) REQ_ID=(?<request_id>\S*) USER_ID=(?<user_id>\S*) LOGIN=(?<login>\S*) (?<message>.*)$')
+    @@line_regex = Regexp.new('.* RESULT=(?<result>(SUCCESS|FAILURE)) STATUS=(?<status>\S*) TIMESTAMP=(?<timestamp>\d{10}) DATE=(?<date>\d{4}-\d{2}-\d{2}) TIME=(?<time>\d{2}:\d{2}:\d{2}) ACTION=(?<action>\S*) REQ_ID=(?<request_id>\S*) USER_ID=(?<user_id>\S*) LOGIN=(?<login>\S*) (?<message>.*)$')
 
     def initialize(line, debug=false, log=Log.new)
         @error_count = 0
