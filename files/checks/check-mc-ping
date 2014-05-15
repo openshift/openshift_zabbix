@@ -27,18 +27,36 @@
 #   on each broker.
 #
 require_relative '../lib/zabbix_sender'
+require_relative '../lib/zabbix_helper'
 require_relative '../lib/openshift_mcollective'
 require_relative '../lib/openshift_mongo'
 require_relative '../lib/utils/log'
 require_relative '../lib/utils/cli_opts'
 
+#Require to use facter from cron
+$LOAD_PATH.unshift('/var/lib/puppet/lib')
 require 'facter'
 
+SenderItem = Struct.new(:host, :key, :value)
+
+def sender(server, results, log, verbose)
+  zs = ZabbixSender.new(server, :log => log)
+  results.each do |result|
+    zs.add_entry(result.key, result.value, result.host)
+  end
+
+  zs.send_data(verbose)
+end
+
+def get_zabbix_proxies(file)
+    return ConfigFile.new({:filename => file})
+end
+
 # This 'ping' is simply checking Facter('fqdn') on each remote host.
-def get_mco_hosts
+def get_mco_hosts(verbose, log)
   mco_hosts = []
   begin
-    omco      = OpenShiftMCollective.new(:verbose=>$verbose)
+    omco      = OpenShiftMCollective.new(:verbose=>verbose)
     responses = omco.get_nodes_facts(['fqdn'], true)
 
     responses.each do |response|
@@ -52,75 +70,96 @@ def get_mco_hosts
         end
       rescue Exception => ex
         # If a host throws an exception, other hosts should still get evaluated
-        if $verbose
-          $log.puts "ERROR: #{ex.message}"
-          $log.puts %Q[#{ex.backtrace.join("\n")}]
+        if verbose
+          log.puts "ERROR: #{ex.message}"
+          log.puts %Q[#{ex.backtrace.join("\n")}]
         end
       end
     end
   rescue Exception => ex
-    if $verbose
-      $log.puts "ERROR: #{ex.message}"
-      $log.puts %Q[#{ex.backtrace.join("\n")}]
+    if verbose
+      log.puts "ERROR: #{ex.message}"
+      log.puts %Q[#{ex.backtrace.join("\n")}]
     end
   end
 
   return mco_hosts
 end
 
-def main
+def main(opts)
   missing_hosts  = []
   district_hosts = []
-  retries        = MAX_RETRIES
-  $log           = Log.new
+  log            = Log.new
+  verbose        = opts[:verbose]
+  retries        = opts[:retries] || 3
+  delay          = opts[:delay] || 5
 
   begin
     district_hosts = OpenShiftMongo.new(OpenShiftMongo.get_broker_mongo_config).get_district_nodes
-    mco_hosts      = get_mco_hosts
+    mco_hosts      = get_mco_hosts(verbose,log)
     missing_hosts  = district_hosts - mco_hosts
     retries -= 1
 
     has_problem = (missing_hosts.size > 0) || (district_hosts.size == 0)
 
     if has_problem && retries > 0
-      $log.puts "Problem detected, sleeping #{TIME_BETWEEN_RETRIES} seconds" if $verbose
-      sleep TIME_BETWEEN_RETRIES
-      $log.puts "retrying check (#{retries} retries left)" if $verbose
+      log.puts "Problem detected, sleeping #{delay} seconds" if verbose
+      sleep delay
+      log.puts "retrying check (#{retries} retries left)" if verbose
     end
   end while has_problem && retries > 0
 
-  zs  = ZabbixSender.new($opts[:server], :port => $opts[:port], :log => $log)
+  zs  = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
 
-  $log.puts "Missing these hosts for per host check:" if $verbose && missing_hosts.size > 0
+  log.puts "Missing these hosts for per host check:" if verbose && missing_hosts.size > 0
+
+  # Per Broker Reporting
+  broker_results = []
+  zbx_val = nil
+  if district_hosts.size == 0
+    log.puts "\n\nFailed to get hosts in all districts\n\n" if verbose
+    zbx_val = 1 # Alert to the fact that district hosts are missing
+  else
+    if verbose && missing_hosts.length > 0
+      log.puts "Missing these hosts for per broker check:"
+      missing_hosts.each { |host| log.puts "#{host}" }
+    end
+    zbx_val = missing_hosts.length
+  end
+  broker_results << SenderItem.new(Facter.fact('fqdn').value, "mco_broker_ping", zbx_val)
+  sender(opts[:server], broker_results, log, verbose)
 
   #Per Host Reporting
-  if $opts[:perhost]
+  if opts[:perhost]
+    results = []
     district_hosts.each do |host|
       zbx_val = 0
       if missing_hosts.include?(host)
         zbx_val = 1 # Report this host
-        $log.puts "#{host}" if $verbose
+        log.puts "#{host}" if verbose
       end
 
-      zs.add_entry("mco_host_ping", zbx_val, host)
+      results << SenderItem.new(host, "mco_host_ping", zbx_val)
+    end
+
+    proxy_yaml  = get_zabbix_proxies(opts[:proxy_yaml])
+    raise "No proxy yaml config available." if proxy_yaml.config.empty?
+    zbx_proxy_host = proxy_yaml.config[:proxy_hosts]
+
+    zbx_proxy_host.each do |proxy, hosts|
+      next if hosts.nil?
+      proxy_results = results.select { |result| hosts.include?(result.host) }
+      sender(proxy, proxy_results, log, verbose) unless opts[:test] && proxy_results.size > 0
+
+      results -= proxy_results
+    end
+
+    #send the rest to the zabbix server
+    if results.size > 0 && !opts[:test]
+      zabbix_server = proxy_yaml.config[:zabbix_server]
+      sender(zabbix_server, results, log, verbose)
     end
   end
-
-  # Per Broker Reporting
-  zbx_val = nil
-  if district_hosts.size == 0
-    $log.puts "\n\nFailed to get hosts in all districts\n\n" if $verbose
-    zbx_val = 1 # Alert to the fact that district hosts are missing
-  else
-    if $verbose && missing_hosts.length > 0
-      $log.puts "Missing these hosts for per broker check:"
-      missing_hosts.each { |host| $log.puts "#{host}" }
-    end
-    zbx_val = missing_hosts.length
-  end
-  zs.add_entry("mco_broker_ping", zbx_val)
-
-  zs.send_data($verbose) unless $opts[:test]
 end
 
 if __FILE__ == $0
@@ -130,13 +169,9 @@ if __FILE__ == $0
   cli.on('--[no-]per-host', 'Do per-host reporting. (Default: false}')    { |x| cli.options[:perhost] = x }
   cli.parse
 
-  $opts    = cli.options
-  $verbose = $opts[:verbose]
+  opts = cli.options
 
-  MAX_RETRIES          = $opts[:retries] || 3
-  TIME_BETWEEN_RETRIES = $opts[:delay]   || 5 # seconds
-
-  main
+  main(opts)
 end
 
 __END__

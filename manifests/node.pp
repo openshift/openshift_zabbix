@@ -31,6 +31,8 @@
 class openshift_zabbix::node (
     $script_dir = '/usr/share/zabbix/bin'
 ) {
+    include ::oo_ops::cmd::rand_sleep
+
     ensure_resource('class', '::openshift_zabbix::libs', {
         script_dir => "${script_dir}/../lib"
     })
@@ -44,7 +46,7 @@ class openshift_zabbix::node (
 
     cron { 'check-accept-node':
         ensure  => 'present',
-        command => "PATH=/sbin:\$PATH /usr/local/bin/rand_sleep 900 ${script_dir}/check-accept-node",
+        command => "PATH=/sbin:\$PATH /usr/local/bin/rand_sleep 900 /usr/bin/flock -n /var/tmp/check-accept-node.lock -c ${script_dir}/check-accept-node",
         minute  => 0,
         hour    => [ 2,14 ],
         require => File["${script_dir}/check-accept-node"];
