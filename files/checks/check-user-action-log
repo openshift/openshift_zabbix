@@ -27,7 +27,7 @@ require_relative '../lib/utils/cli_opts'
 require_relative '../lib/utils/log'
 require_relative '../lib/utils/state'
 
-UserActionLog    = '/var/log/openshift/broker/user_action.log'
+UserActionLog    = '/var/log/openshift/broker/openshift-broker.log'
 DefaultLogFile   = "/var/log/#{File.basename($0)}.log"
 DefaultStateFile = "/var/lib/#{File.basename($0)}.state"
 
@@ -45,7 +45,7 @@ def parse_action_log
   fh = LogFileParser.new($user_action_log, $last_check_time)
   $log.puts "Last check time:  #{$last_check_time}" if $verbose
   fh.each { |line|
-    next unless /^RESULT=(SUCCESS|FAILURE)/.match(line)
+    next unless /.* RESULT=(SUCCESS|FAILURE).*/.match(line)
 
     lines += 1
     ua = UserAction.new(line, $verbose)
