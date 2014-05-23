@@ -73,7 +73,7 @@ class openshift_zabbix::broker (
 
         'check-user-action-log':
             ensure  => present,
-            command => "${script_dir}/check-user-action-log",
+            command => "flock -n /var/tmp/check-user-action-log.lock -c \"${script_dir}/check-user-action-log\"",
             minute  => '*/5',
             require => File["${script_dir}/check-user-action-log"];
     }
