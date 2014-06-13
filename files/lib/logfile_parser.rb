@@ -29,7 +29,7 @@ class LogFileParser
   def initialize(fname, start_time=(Time.now-3600).to_i)
     raise ArgumentError unless (File.exists?(fname) and File.readable?(fname))
 
-    @log         = File.open(fname, 'r')
+    @log         = File.open(fname, 'rb:UTF-8')
     @start_time  = start_time
     @buffer_size = 128 * 1024
     @byte_offset = @buffer_size
