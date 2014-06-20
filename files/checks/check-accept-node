@@ -24,9 +24,19 @@ require_relative '../lib/utils/cli_opts'
 DefaultLogFile = "/var/log/#{File.basename($0)}.log"
 
 def main(opts)
-  log_to     = opts[:log_to] || DefaultLogFile
-  log        = Log.new(:file,:info,log_to)
-  zs         = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
+  log_to      = opts[:log_to] || DefaultLogFile
+  log         = Log.new(:file,:info,log_to)
+  bypassflag = opts[:bypassflag] || false
+  zs          = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
+
+  puts (File.exists?('/var/lock/openshift_update_in_progress') and (bypassflag == false))
+  if File.exists?('/var/lock/openshift_update_in_progress') and (bypassflag == false)
+    log.puts "Sending clean running because /var/log/openshift_update_in_progress flag is present"
+    log.puts "To run for real remove /var/log/openshift_update_in_progress"
+    zs.add_entry("accept_node", 0)
+    zs.send_data(false) unless opts[:test]
+    return
+  end
 
   #turn on verbose reporting
   verbose = opts[:verbose]
@@ -74,6 +84,7 @@ if __FILE__ == $0
   cli = CLIOpts.new
   cli.on('--retries NUM', Integer, 'Max. number of retries (Default: 5)') { |x| cli.options[:retries] = x }
   cli.on('--log-to LOG', "Location to write log files (Default: #{DefaultLogFile})") { |x| cli.options[:log_to] = x }
+  cli.on('--bypass-flag-check', 'Run despite /var/log/openshift_upgrade_in_progress existing') { |x| cli.options[:bypassflag] = x }
   cli.parse
   opts = cli.options
 
