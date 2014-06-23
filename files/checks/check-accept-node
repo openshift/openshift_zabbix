@@ -29,7 +29,6 @@ def main(opts)
   bypassflag = opts[:bypassflag] || false
   zs          = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
 
-  puts (File.exists?('/var/lock/openshift_update_in_progress') and (bypassflag == false))
   if File.exists?('/var/lock/openshift_update_in_progress') and (bypassflag == false)
     log.puts "Sending clean running because /var/log/openshift_update_in_progress flag is present"
     log.puts "To run for real remove /var/log/openshift_update_in_progress"
