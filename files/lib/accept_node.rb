@@ -41,6 +41,23 @@ class AcceptNode
     @log.stdout.debug("Exit Code: #{@exitcode}") if @verbose
   end
 
+  def run_upgrade_checks
+    tmpfile = Tempfile.new(self.class.name)
+
+    if @verbose
+      cmd = "/usr/bin/env oo-ruby -E UTF-8:UTF-8 #{@@accept_node} -v --run-upgrade-checks 2>&1 | /usr/bin/tee #{tmpfile.path} ; exit ${PIPESTATUS[0]}"
+      @log.stdout.debug("Running: #{cmd}\n\n")
+    else
+      cmd = "/usr/bin/env oo-ruby -E UTF-8:UTF-8 #{@@accept_node} --run-upgrade-checks > #{tmpfile.path} 2>&1"
+    end
+
+    system(cmd)
+    @exitcode = $?.exitstatus
+    @output = File.read(tmpfile.path)
+    @log.stdout.debug("Exit Code: #{@exitcode}") if @verbose
+    return @output
+  end
+
   def cgroup_reclassify
     uuids = []
     @output.split("\n").each do |line|
