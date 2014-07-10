@@ -29,13 +29,10 @@
 # limitations under the License.
 #
 class openshift_zabbix::node (
-    $script_dir = '/usr/share/zabbix/bin'
+    $script_dir     = '/usr/share/zabbix/bin',
 ) {
     include ::oo_ops::cmd::rand_sleep
-
-    ensure_resource('class', '::openshift_zabbix::libs', {
-        script_dir => "${script_dir}/../lib"
-    })
+    include ::oo_zabbix::lib_dir
 
     file { "${script_dir}/check-accept-node":
         owner   => 'root',
