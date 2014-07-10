@@ -30,11 +30,9 @@
 #
 class openshift_zabbix::broker (
     $script_dir     = '/usr/share/zabbix/bin',
-    $script_lib_dir = undef,
 ) {
-    ensure_resource('class', '::openshift_zabbix::libs', {
-        script_dir => $script_lib_dir
-    })
+
+    include ::oo_zabbix::lib_dir
 
     file {
         "${script_dir}/check-mc-ping":
