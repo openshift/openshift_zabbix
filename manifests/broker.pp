@@ -29,10 +29,11 @@
 # limitations under the License.
 #
 class openshift_zabbix::broker (
-    $script_dir = '/usr/share/zabbix/bin'
+    $script_dir     = '/usr/share/zabbix/bin',
+    $script_lib_dir = undef,
 ) {
     ensure_resource('class', '::openshift_zabbix::libs', {
-        script_dir => "${script_dir}/../lib"
+        script_dir => $script_lib_dir
     })
 
     file {
