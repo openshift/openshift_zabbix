@@ -90,8 +90,8 @@ class LogFileParser
         num_offsets = validate_offset((num_offsets-1))
         @log.seek((num_offsets*@byte_offset), File::SEEK_SET)
 
-        date_line   = @log.read(@buffer_size).split("\n")[1]
-        date        = parse_date(date_line)
+        chunk = @log.read(@buffer_size)
+        date  = chunk.nil? ? nil : parse_date(chunk.split("\n")[1])
       end
     end
   end
