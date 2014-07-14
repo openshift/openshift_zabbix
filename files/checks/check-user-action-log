@@ -45,23 +45,29 @@ def parse_action_log
   fh = LogFileParser.new($user_action_log, $last_check_time)
   $log.puts "Last check time:  #{$last_check_time}" if $verbose
   fh.each { |line|
-    # work around occasionally getting invalid UTF-8 byte sequences
-    utf8line = line.to_s.encode!('UTF-8', :invalid => :replace, :undef => :replace)
+    begin
+      # work around occasionally getting invalid UTF-8 byte sequences
+      utf8line = line.to_s.encode!('UTF-8', :invalid => :replace, :undef => :replace)
 
-    next unless /.* RESULT=(SUCCESS|FAILURE).*/.match(utf8line)
+      next unless /.* RESULT=(SUCCESS|FAILURE).*/.match(utf8line)
 
-    lines += 1
-    ua = UserAction.new(utf8line, $verbose)
-    $parse_errors += ua.error_count if ua.error_count > 0
-    if ua.timestamp.nil? or $last_check_time.nil?
-      errors += 1
+      lines += 1
+      ua = UserAction.new(utf8line, $verbose)
+      $parse_errors += ua.error_count if ua.error_count > 0
+      if ua.timestamp.nil? or $last_check_time.nil?
+        errors += 1
+        next
+      end
+
+      if ua.timestamp >= $last_check_time
+        actions << ua
+      else
+        errors += 1
+      end
+    rescue ArgumentError => e
+      $log.puts "Problem with this line: '#{line}'"
+      $parse_errors += 1
       next
-    end
-
-    if ua.timestamp >= $last_check_time
-      actions << ua
-    else
-      errors += 1
     end
   }
 
