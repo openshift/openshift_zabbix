@@ -32,22 +32,21 @@ class openshift_zabbix::msgbus (
     $script_dir = '/usr/share/zabbix/bin',
     $java_home  = '/usr/lib/jvm/java'
 ) {
-    ensure_resource('class', '::openshift_zabbix::libs', {
-        script_dir => "${script_dir}/../lib"
-    })
 
-    file {
-        "${script_dir}/ActiveMQStats.java":
-            owner   => 'root',
-            group   => 'root',
-            mode    => '0755',
-            source  => 'puppet:///modules/openshift_zabbix/checks/ActiveMQStats.java';
+    file { "${script_dir}/ActiveMQStats.java":
+      owner   => 'root',
+      group   => 'root',
+      mode    => '0755',
+      source  => 'puppet:///modules/openshift_zabbix/checks/ActiveMQStats.java',
+      require => Class['::openshift_zabbix::libs'];
+    }
 
-        "${script_dir}/check-activemq-stats":
-            owner   => 'root',
-            group   => 'root',
-            mode    => '0755',
-            source  => 'puppet:///modules/openshift_zabbix/checks/check-activemq-stats';
+    file { "${script_dir}/check-activemq-stats":
+      owner   => 'root',
+      group   => 'root',
+      mode    => '0755',
+      source  => 'puppet:///modules/openshift_zabbix/checks/check-activemq-stats',
+      require => Class['::openshift_zabbix::libs'];
     }
 
     cron { 'check-activemq-stats':
