@@ -92,6 +92,9 @@ class LogFileParser
 
         chunk = @log.read(@buffer_size)
         date  = chunk.nil? ? nil : parse_date(chunk.split("\n")[1])
+
+        # avoid endlessly looping if we're at the beginning of the file.
+        break if date.nil? and num_offsets == 0
       end
     end
   end
