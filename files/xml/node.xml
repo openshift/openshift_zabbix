@@ -304,14 +304,6 @@
             </items>
             <discovery_rules/>
             <macros/>
-            <templates>
-                <template>
-                    <name>Template App Apache Worker</name>
-                </template>
-                <template>
-                    <name>Template File System Checks</name>
-                </template>
-            </templates>
             <screens/>
         </template>
     </templates>
