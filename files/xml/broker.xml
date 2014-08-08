@@ -23,7 +23,6 @@
             </applications>
             <items>
                 <item>
-                <item>
                     <name>Number of gears in large districts</name>
                     <type>2</type>
                     <snmp_community/>
