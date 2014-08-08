@@ -88,23 +88,19 @@ end
 
 def main(opts)
   missing_hosts  = []
+  extra_hosts  = []
   district_hosts = []
   log            = Log.new
   verbose        = opts[:verbose]
   retries        = opts[:retries] || 3
   delay          = opts[:delay] || 5
 
-  node0_results = [ SenderItem.new(Facter.fact('fqdn').value, "mco_node0_ping", 0) ]
-
   begin
     district_hosts = OpenShiftMongo.new(OpenShiftMongo.get_broker_mongo_config).get_district_nodes
     mco_hosts      = get_mco_hosts(verbose,log)
     missing_hosts  = district_hosts - mco_hosts
+    extra_hosts    = mco_hosts - district_hosts
     retries -= 1
-
-    if mco_hosts.include?("ex-std-node0.prod.rhcloud.com")
-      node0_results = [ SenderItem.new(Facter.fact('fqdn').value, "mco_node0_ping", 1) ]
-    end
 
     has_problem = (missing_hosts.size > 0) || (district_hosts.size == 0)
 
@@ -114,8 +110,6 @@ def main(opts)
       log.puts "retrying check (#{retries} retries left)" if verbose
     end
   end while has_problem && retries > 0
-
-  sender(opts[:server], node0_results, log, verbose)
 
   zs  = ZabbixSender.new(opts[:server], :port => opts[:port], :log => log)
 
@@ -133,8 +127,14 @@ def main(opts)
       missing_hosts.each { |host| log.puts "#{host}" }
     end
     zbx_val = missing_hosts.length
+    if verbose && extra_hosts.length > 0
+      log.puts "These hosts are responding to mco ping, but aren't in a district:"
+      extra_hosts.each { |host| log.puts "#{host}" }
+    end
   end
   broker_results << SenderItem.new(Facter.fact('fqdn').value, "mco_broker_ping", zbx_val)
+  broker_results << SenderItem.new(Facter.fact('fqdn').value, "mco_extra_hosts",
+                                     extra_hosts.length)
   sender(opts[:server], broker_results, log, verbose)
 
   #Per Host Reporting
