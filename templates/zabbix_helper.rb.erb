@@ -1,0 +1,274 @@
+#!/usr/bin/env ruby
+#
+# Copyright 2012 Red Hat Inc.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+#  Purpose: provide functionality to interface with zabbix
+
+require 'rubygems'
+require 'zbxapi'
+
+class ZabbixAPI
+    def checkversion(major,minor,options=nil)
+    end
+end
+
+class ZabbixHelper
+    attr_reader :zabbix, :server_url, :login_user, :login_pass
+
+    def initialize(opts={})
+        @server_url='<%= @server_url %>'
+        @login_user='<%= @api_user %>'
+        @login_pass='<%= @api_password %>'
+
+        @debug = 0
+        @debug = 4 if opts.include?('verbose')
+
+        @zabbix = ZabbixAPI.new(@server_url, :debug=>@debug, :verify_ssl => false )
+        @zabbix.login(@login_user,@login_pass)
+    end
+
+    # return an array of host group names
+    def get_hostgroups()
+        groups = @zabbix.hostgroup.get({"output" => "extend", "sortfield" => "name",})
+        host_groups_names = []
+        groups.each { |group| host_groups_names << group['name'] }
+        return host_groups_names
+    end
+
+    # return an array of hosts
+    # pass in string or array of host group names
+    # e.g1 get_hosts_from_hostgroup("prod_broker")
+    # e.g2 get_hosts_from_hostgroup(["prod_broker","prod_msg"])
+    def get_hosts_from_hostgroup(host_group_name)
+        raise "host_group_name must be set" if host_group_name.nil?
+
+        results = @zabbix.hostgroup.get({"filter" => { "name" => host_group_name}, "sortfield" => "name", "selectHosts" => "extend"})
+        return false unless results.any? == true
+        host_names = []
+        results.each { |result| result["hosts"].each { |host| host_names << host["name"] } }
+        return host_names
+    end
+
+    # return an array of all hosts found in zabbix
+    def get_all_hosts()
+        results = @zabbix.host.get({"output" => ["name"], "sortfield" => "name",})
+        host_names = []
+        results.each { |result| host_names << result['name'] }
+        return host_names
+    end
+
+    def get_triggers_by_hostgroup(hostgroups, trigger_filters)
+        hostgroups = [hostgroups] if hostgroups.is_a?(String)
+        trigger_filters = [trigger_filters] if trigger_filters.is_a?(String)
+
+        results = @zabbix.hostgroup.get({"filter" => { "name" => hostgroups}})
+        raise "hostgroups #{hostgroup.inspect} returned no entries" if results.empty?
+
+        groupids = results.collect { |r| r['groupid']}
+
+        retval = []
+
+        trigger_filters.each do |filter|
+            triggers = @zabbix.trigger.get({
+                                        "output" => "extend",
+                                        "groupids"  => groupids,
+                                        "selectHosts" => "extend",
+                                        "searchWildcardsEnabled" => 1,
+                                        "search" => { "description" => "#{filter}" },
+                                        "filter" => { "value" => 1 }
+                                       })
+
+            retval += triggers
+        end
+
+        hosts = Hash.new { |hash,key| hash[key] = [] }
+        retval.each do |trigger|
+            hosts[trigger['description']] << trigger['hosts'].first['name']
+        end
+
+        return hosts
+    end
+
+    def create_maintenance(hosts,name,description,duration)
+        raise "hosts must be set" if hosts.nil?
+        raise "name must be set" if name.nil?
+        raise "description must be set" if description.nil?
+        raise "duration must be set" if duration.nil?
+
+        hosts = hosts.split(",") if hosts.class == String
+        host_ids = []
+        hosts.each { |h| host_ids << get_host_id(h) }
+        active_since = Time.now.to_i
+        active_till = active_since + duration
+        maint_opts = {
+            "hostids"          => host_ids,
+            "groupids"         => [],
+            "name"             => name,
+            "description"      => description,
+            "active_since"     => active_since.to_s,
+            "active_till"      => active_till.to_s,
+            "maintenance_type" => "0",
+            "timeperiods"      => ["start_time"=>active_since.to_s, "period"=>duration.to_s]
+        }
+
+        results = @zabbix.raw_api("maintenance.create", maint_opts)
+        maintenance_id = results["maintenanceids"][0]
+        return maintenance_id
+    end
+
+    def create_maintenance_by_hostgroup(hostgroups,name,description,duration)
+        raise "hosts must be set" if hostgroups.nil?
+        raise "name must be set" if name.nil?
+        raise "description must be set" if description.nil?
+        raise "duration must be set" if duration.nil?
+
+        groups = hostgroups.split(",") if hostgroups.class == String
+        hostgroup_ids = []
+        groups.each { |h| hostgroup_ids << get_hostgroup_id(h) }
+        active_since = Time.now.to_i
+        active_till = active_since + duration
+        maint_opts = {
+            "groupids"         => hostgroup_ids,
+            "name"             => name,
+            "description"      => description,
+            "active_since"     => active_since.to_s,
+            "active_till"      => active_till.to_s,
+            "maintenance_type" => "0",
+            "timeperiods"      => ["start_time"=>active_since.to_s, "period"=>duration.to_s]
+        }
+
+        results = @zabbix.raw_api("maintenance.create", maint_opts)
+        maintenance_id = results["maintenanceids"][0]
+        return maintenance_id
+    end
+
+    def update_hosts_in_maintenance(hosts, maintenance_id)
+        raise "maintenance_id must be set" if maintenance_id.nil?
+        raise "hosts must be set" if hosts.nil?
+        current_maintenance = get_maintenance_by_id(maintenance_id)
+        host_ids = []
+        hosts.each { |h| host_ids << get_host_id(h) }
+
+        maint_opts = {
+            "hostids"           => host_ids,
+            "maintenanceid"     => maintenance_id,
+            "name"              => current_maintenance["name"],
+            "description"       => current_maintenance["description"],
+            "active_since"      => current_maintenance["active_since"],
+            "active_till"       => current_maintenance["active_till"],
+            "timeperiods"       => ["start_time"=>Time.now.to_i.to_s, "period"=>(Time.now.to_i + 7200).to_s]
+        }
+
+        results = @zabbix.raw_api("maintenance.update", maint_opts)
+
+        return results["maintenanceids"].first.to_s == maintenance_id.to_s
+    end
+
+    def delete_maintenance_by_id(maintenance_id)
+        raise "maintenance_id must be set" if maintenance_id.nil?
+        results = @zabbix.raw_api("maintenance.delete", [maintenance_id])
+
+        return results["maintenanceids"].first.to_s == maintenance_id.to_s
+    end
+
+    # Not sure how to use this, but it may be helpful.  leaving for that reason
+    def get_maintenances()
+        results = @zabbix.raw_api("maintenance.get", {"output" => "extend", "selectHosts" => "extend", "selectGroups" => "extend"} )
+        pp results
+    end
+
+    def get_zabbix_proxies()
+        results = @zabbix.proxy.get(
+                    {"output"      => "extend",
+                     "selectHosts" => ["name"],
+                     ##"search"      => {"host", "*#{env}*"},
+                     "searchWildcardsEnabled" => 1,
+        })
+
+        return results
+    end
+
+    def get_proxy_by_env(env='ops', shortdomain=nil)
+        results = get_zabbix_proxies()
+
+        proxy_hash = {}
+        results.each do |proxy|
+            next unless proxy['host'] =~ /#{env}/
+            if shortdomain.nil?
+                proxy_hash[proxy['host']] = proxy['hosts'].collect { |h| h['name']}
+            else
+                proxy_hash[proxy['host']] = proxy['hosts'].collect do |h|
+                    h['name'] if h['name'] =~ /#{shortdomain}/
+                end.compact!
+            end
+        end
+
+        return proxy_hash
+    end
+
+    def get_zabbix_server()
+        servers = @zabbix.hostgroup.get(
+                {"output"      => "extend",
+                 "selectHosts" => ["name"],
+                 "search"      => {
+                     "name" => 'Zabbix servers'
+                 }
+        }).first
+        servers = servers['hosts'].collect { |s| s['name']}
+
+        presults = get_zabbix_proxies()
+        proxies = presults.collect { |proxy| proxy['host'] }
+
+        #get zabbix server by removing proxies
+        zabbix_server = (servers - proxies).first
+
+
+        return zabbix_server
+    end
+
+    private
+    def get_host_id(host)
+        raise "host must be set" if host.nil?
+
+        results = @zabbix.host.get({"output" => "extend", "search" => {"name" => host}})
+        return results[0]["hostid"]
+    end
+
+    def get_hostgroup_id(hostgroup)
+        raise "host must be set" if hostgroup.nil?
+
+        results = @zabbix.hostgroup.get({"output" => "extend", "search" => {"name" => hostgroup}})
+        raise "HostGroup not found for #{hostgroup}" if results.nil? || results.empty?
+
+        return results[0]["groupid"]
+    end
+
+    def get_maintenance_by_id(maintenance_id)
+        raise "maintenance_id must be set" if maintenance_id.nil?
+        maintenance = nil
+        results = @zabbix.raw_api(
+                "maintenance.get", {
+                            "output" => "extend",
+                            "selectHosts" => "extend",
+                            "selectGroups" => "extend"
+                }
+        )
+        maintenance = results.select { |m| m["maintenanceid"] == maintenance_id}.first
+        raise "No maintenance found" if maintenance.nil? || maintenance.empty?
+
+        return maintenance
+    end
+
+end
