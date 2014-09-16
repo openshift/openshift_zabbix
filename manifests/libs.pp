@@ -29,12 +29,35 @@
 # limitations under the License.
 #
 class openshift_zabbix::libs (
-    $script_dir = '/usr/share/zabbix/lib'
+    $script_dir = '/usr/share/zabbix/lib',
+    $server_url = undef,
+    $login_user = undef,
+    $login_pass = undef,
 ) {
+    if $server_url == undef {
+        fail ('server_url is not set.')
+    }
+
+    if $login_user == undef {
+        fail ('login_user is not set.')
+    }
+
+    if $login_pass == undef {
+        fail ('login_pass is not set.')
+    }
+
     file { $script_dir:
         ensure       => directory,
         source       => 'puppet:///modules/openshift_zabbix/lib',
         recurse      => true,
         recurselimit => 2;
+    }
+
+    file { "${script_dir}/zabbix_helper.rb":
+        ensure  => present,
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0640',
+        content => template('openshift_zabbix/zabbix_helper.rb.erb'),
     }
 }
