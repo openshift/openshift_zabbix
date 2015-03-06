@@ -49,7 +49,7 @@ def parse_action_log
       # work around occasionally getting invalid UTF-8 byte sequences
       utf8line = line.to_s.encode!('UTF-8', :invalid => :replace, :undef => :replace)
 
-      next unless /.* RESULT=(SUCCESS|FAILURE).*/.match(utf8line)
+      next unless /.* ?RESULT=(SUCCESS|FAILURE).*/.match(utf8line)
 
       lines += 1
       ua = UserAction.new(utf8line, $verbose)

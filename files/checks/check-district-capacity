@@ -36,14 +36,16 @@ def get_district_stats
 end
 
 def main
+  # Initialize zabbix sender before oo-stats.  oo-stats stomps on
+  # the facter library
+  zs = ZabbixSender.new($opts[:server], :port=>$opts[:port], :log=>$log)
+
   stats = get_district_stats
 
   if stats.nil?
     $log.error "Unable to gather stats from oo-stats. Exiting..."
     exit
   end
-
-  zs = ZabbixSender.new($opts[:server], :port=>$opts[:port], :log=>$log)
 
   stats['profile_summaries'].each do |profile|
     name        = profile['profile']
