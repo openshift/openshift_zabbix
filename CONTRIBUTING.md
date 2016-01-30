@@ -17,7 +17,7 @@ agree on some guidelines for participation. This document walks through
 various expectations that have developed for the OpenShift project(s).
 
 With awareness that any open source project guidelines must sometimes bend to
-allow specific circumstances, we hope these will be useful guidelines for 
+allow specific circumstances, we hope these will be useful guidelines for
 making this project successful. That also means guidelines should be limited in
 order to avoid becoming TL;DR.
 
