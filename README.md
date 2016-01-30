@@ -23,12 +23,12 @@ Scope
 
 While Zabbix is the primary target for these scripts, it is not expected to be
 the only use case. Many of these scripts should be capable of being utilized with
-any Netowrk Monitoring Software with little or no modifications. Where changes
+any Network Monitoring Software with little or no modifications. Where changes
 are required to support other monitoring solutions, patches are welcome.
 
 This repository also contains configuration management code for deploying and
 configuring the scripts using Puppet. Similarly, while Puppet is the primary
-target, patches to support other configuration management software is welcome.
+target, patches to support other configuration management software are welcome.
 
 License
 =======
@@ -71,7 +71,7 @@ Getting Started
 1. (Optional) Add the openshift\_zabbix module into your Puppet code repository,
    and integrate it into your manifests.
 1. Deploy *openshift_zabbix/files/{checks,lib}* onto your OpenShift broker,
-   node, and messaging (ActiveMQ) server as documented in
+   node and messaging (ActiveMQ) server as documented in
    *openshift_zabbix/manifests*.
 1. (Optional) Use *openshift_zabbix/files/openshift_zabbix.conf.sample* as an
    example of how to deploy common configuration settings to your OpenShift
